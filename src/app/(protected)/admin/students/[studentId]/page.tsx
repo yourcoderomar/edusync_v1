@@ -1,0 +1,272 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
+import { notFound } from 'next/navigation'
+import { getStudentById } from '@/lib/actions/students/get-students'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { formatDate } from '@/lib/utils/format'
+
+/**
+ * Derive quiz attempt status from data
+ */
+function getAttemptStatus(attempt: any): 'graded' | 'submitted' | 'in_progress' {
+  if (!attempt.submitted_at) return 'in_progress'
+  if (attempt.score !== null) return 'graded'
+  return 'submitted'
+}
+
+interface StudentDetailsPageProps {
+  params: Promise<{ studentId: string }>
+}
+
+export async function generateMetadata({ params }: StudentDetailsPageProps): Promise<Metadata> {
+  const { studentId } = await params
+  const result = await getStudentById(studentId)
+  
+  if (!result.success || !result.data) {
+    return {
+      title: 'Student Not Found',
+    }
+  }
+
+  const { student } = result.data
+
+  return {
+    title: student.full_name || 'Student',
+    description: `View details and performance for ${student.full_name || 'student'}`,
+  }
+}
+
+/**
+ * Student details page
+ * 
+ * @semantic Uses semantic HTML with proper structure
+ * @security Server-side data fetching with RLS
+ */
+export default async function StudentDetailsPage({ params }: StudentDetailsPageProps) {
+  const { studentId } = await params
+  const result = await getStudentById(studentId)
+
+  if (!result.success || !result.data) {
+    notFound()
+  }
+
+  const { student, enrollments, quizAttempts } = result.data
+
+  return (
+    <>
+      <header className="mb-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            {student.profile_picture_url ? (
+              <div className="relative h-20 w-20 rounded-full overflow-hidden">
+                <Image
+                  src={student.profile_picture_url}
+                  alt={`${student.full_name || 'Student'}'s profile picture`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-600 font-bold text-2xl">
+                  {(student.full_name || 'S').charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {student.full_name || 'Unnamed Student'}
+              </h1>
+              {student.phone && (
+                <p className="mt-2 text-gray-600">
+                  <span className="text-gray-500">Phone:</span> {student.phone}
+                </p>
+              )}
+              <p className="mt-1 text-sm text-gray-500">
+                <time dateTime={student.created_at}>
+                  Joined {formatDate(student.created_at)}
+                </time>
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/admin/students">Back to students</Link>
+          </Button>
+        </div>
+      </header>
+
+      <div className="grid gap-6 md:grid-cols-2 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Enrolled Classes</p>
+                <p className="text-2xl font-bold text-gray-900">{enrollments.length}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Quiz Attempts</p>
+                <p className="text-2xl font-bold text-gray-900">{quizAttempts.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {quizAttempts.length > 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-500">Completed Quizzes</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {quizAttempts.filter((a: any) => getAttemptStatus(a) === 'graded').length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Average Score</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {(() => {
+                      const gradedAttempts = quizAttempts.filter((a: any) => getAttemptStatus(a) === 'graded' && a.score !== null)
+                      if (gradedAttempts.length === 0) return 'N/A'
+                      const avg = gradedAttempts.reduce((sum: number, a: any) => sum + a.score, 0) / gradedAttempts.length
+                      return `${Math.round(avg)}%`
+                    })()}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No quiz data available</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <section aria-labelledby="enrollments-heading" className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle id="enrollments-heading">Enrolled Classes</CardTitle>
+            <CardDescription>
+              Classes this student is currently enrolled in
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {enrollments.length === 0 ? (
+              <p className="text-sm text-gray-500">Not enrolled in any classes yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Class Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Enrolled Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {enrollments.map((enrollment: any) => {
+                    const classData = enrollment.classes
+                    if (!classData) return null
+                    
+                    return (
+                      <TableRow key={enrollment.class_id}>
+                        <TableCell className="font-medium">{classData.name || 'Unknown Class'}</TableCell>
+                        <TableCell className="text-gray-600">
+                          {classData.description || 'No description'}
+                        </TableCell>
+                        <TableCell>
+                          <time dateTime={enrollment.enrolled_at}>
+                            {formatDate(enrollment.enrolled_at)}
+                          </time>
+                        </TableCell>
+                        <TableCell>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/admin/classes/${classData.id}`}>View Class</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section aria-labelledby="quizzes-heading">
+        <Card>
+          <CardHeader>
+            <CardTitle id="quizzes-heading">Quiz Attempts</CardTitle>
+            <CardDescription>
+              Recent quiz attempts and scores
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {quizAttempts.length === 0 ? (
+              <p className="text-sm text-gray-500">No quiz attempts yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Score</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {quizAttempts.slice(0, 10).map((attempt: any) => {
+                    const status = getAttemptStatus(attempt)
+                    return (
+                      <TableRow key={attempt.id}>
+                        <TableCell>
+                          <time dateTime={attempt.started_at}>
+                            {formatDate(attempt.started_at)}
+                          </time>
+                        </TableCell>
+                        <TableCell>
+                          {attempt.submitted_at ? (
+                            <time dateTime={attempt.submitted_at}>
+                              {formatDate(attempt.submitted_at)}
+                            </time>
+                          ) : (
+                            <span className="text-gray-400">Not submitted</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                              status === 'graded'
+                                ? 'bg-green-100 text-green-800'
+                                : status === 'submitted'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            {status.replace('_', ' ')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {attempt.score !== null ? `${attempt.score}%` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  )
+}
+
