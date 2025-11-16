@@ -20,6 +20,8 @@ export function AttendanceQRCode({ sessionId, classId }: AttendanceQRCodeProps) 
   // Only generate URL on client side to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true)
+    // Use current origin (localhost in dev, Vercel URL in production)
+    // This ensures QR codes work in the current environment
     const baseUrl = window.location.origin
     setScanUrl(`${baseUrl}/attendance/scan?sessionId=${sessionId}&classId=${classId}`)
   }, [sessionId, classId])

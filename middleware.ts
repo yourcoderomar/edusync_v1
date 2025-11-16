@@ -11,13 +11,32 @@ import { updateSession } from '@/lib/supabase/middleware'
  * - Refreshes auth tokens automatically
  */
 export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(request)
-  
   const { pathname } = request.nextUrl
+  
+  // Normalize pathname (remove trailing slash for consistent matching)
+  const normalizedPathname = pathname.endsWith('/') && pathname !== '/' 
+    ? pathname.slice(0, -1) 
+    : pathname
 
-  // Public routes that don't require authentication
-  const publicRoutes = ['/signin', '/signup', '/attendance/scan']
-  const isPublicRoute = publicRoutes.includes(pathname)
+  // Allow attendance scan page for both authenticated and unauthenticated users
+  // This must be checked FIRST, even before calling updateSession
+  if (normalizedPathname === '/attendance/scan' || normalizedPathname.startsWith('/attendance/scan')) {
+    // Still need to update session for auth cookies, but don't block on errors
+    try {
+      const { supabaseResponse } = await updateSession(request)
+      return supabaseResponse
+    } catch (error) {
+      // If session update fails, still allow access to scan page
+      return NextResponse.next()
+    }
+  }
+
+  // For all other routes, update session normally
+  const { supabaseResponse, user, supabase } = await updateSession(request)
+
+  // Public routes that don't require authentication (excluding attendance/scan which is handled above)
+  const publicRoutes = ['/signin', '/signup']
+  const isPublicRoute = publicRoutes.includes(normalizedPathname)
   
   // If user is not authenticated
   if (!user) {
@@ -29,7 +48,7 @@ export async function middleware(request: NextRequest) {
     // Redirect to sign in for protected routes
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/signin'
-    redirectUrl.searchParams.set('redirectTo', pathname)
+    redirectUrl.searchParams.set('redirectTo', normalizedPathname)
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -41,20 +60,21 @@ export async function middleware(request: NextRequest) {
     .single()
 
   // Allow access to profile setup page
-  const isProfileSetupRoute = pathname === '/profile/setup'
+  const isProfileSetupRoute = normalizedPathname === '/profile/setup'
   
   // Type assertion for profile_picture_url which exists in actual database
   type ProfileWithPicture = { role: 'admin' | 'student'; profile_picture_url: string | null }
   const typedProfile = profile as ProfileWithPicture | null
-  
-  // Check if profile picture is missing - redirect to setup (except if already on setup page)
-  if (typedProfile && !typedProfile.profile_picture_url && !isProfileSetupRoute) {
+
+  // Check if profile picture is missing - redirect to setup (except if already on setup page or attendance scan)
+  const isAttendanceScan = normalizedPathname === '/attendance/scan' || normalizedPathname.startsWith('/attendance/scan')
+  if (typedProfile && !typedProfile.profile_picture_url && !isProfileSetupRoute && !isAttendanceScan) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/profile/setup'
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If authenticated user tries to access auth pages, redirect to dashboard
+  // If authenticated user tries to access auth pages (signin/signup), redirect to dashboard
   if (isPublicRoute) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = typedProfile?.role === 'admin' 
@@ -64,8 +84,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based route protection
-  const isAdminRoute = pathname.startsWith('/admin')
-  const isStudentRoute = pathname.startsWith('/student')
+  const isAdminRoute = normalizedPathname.startsWith('/admin')
+  const isStudentRoute = normalizedPathname.startsWith('/student')
 
   // Protect admin routes
   if (isAdminRoute && typedProfile?.role !== 'admin') {
