@@ -69,7 +69,11 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
   useEffect(() => {
     // Subscribe to attendance changes for this session
     const channel = supabase
-      .channel(`attendance:${sessionId}`)
+      .channel(`attendance:${sessionId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -138,13 +142,24 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription connected for attendance:', sessionId)
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error. Make sure Realtime is enabled for the attendance table in Supabase.')
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏱️ Real-time subscription timed out')
+        } else if (status === 'CLOSED') {
+          console.log('🔌 Real-time subscription closed')
+        }
+      })
 
     channelRef.current = channel
 
     // Cleanup subscription on unmount
     return () => {
       if (channelRef.current) {
+        console.log('🧹 Cleaning up real-time subscription')
         supabase.removeChannel(channelRef.current)
       }
     }
