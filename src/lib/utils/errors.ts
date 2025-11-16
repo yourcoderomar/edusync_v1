@@ -127,3 +127,37 @@ export function logError(error: unknown, context?: string) {
   }
 }
 
+/**
+ * Handle server action errors consistently
+ * Logs error and returns standardized error response
+ * 
+ * @security Sanitizes error messages to prevent information leakage
+ */
+export function handleServerError(error: unknown, fallbackMessage: string = 'An error occurred') {
+  logError(error, fallbackMessage)
+  
+  // If it's a known AppError, return its message
+  if (error instanceof AppError) {
+    return {
+      success: false as const,
+      error: error.message,
+    }
+  }
+  
+  // For Zod validation errors
+  if (error && typeof error === 'object' && 'issues' in error) {
+    const zodError = error as any
+    const firstIssue = zodError.issues?.[0]
+    return {
+      success: false as const,
+      error: firstIssue?.message || 'Validation failed',
+    }
+  }
+  
+  // For generic errors, return fallback message
+  return {
+    success: false as const,
+    error: fallbackMessage,
+  }
+}
+
