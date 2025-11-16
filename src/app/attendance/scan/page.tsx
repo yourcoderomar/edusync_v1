@@ -87,7 +87,9 @@ export default function AttendanceScanPage() {
                     onClick={() => {
                       const sessionId = searchParams.get('sessionId')
                       const classId = searchParams.get('classId')
-                      const redirectUrl = `/signin?redirectTo=/attendance/scan?sessionId=${sessionId}&classId=${classId}`
+                      // Properly encode the redirect URL with query parameters
+                      const scanUrl = `/attendance/scan?sessionId=${encodeURIComponent(sessionId || '')}&classId=${encodeURIComponent(classId || '')}`
+                      const redirectUrl = `/signin?redirectTo=${encodeURIComponent(scanUrl)}`
                       router.push(redirectUrl)
                     }} 
                     className="w-full"

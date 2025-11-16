@@ -77,6 +77,16 @@ export async function signIn(input: SignInInput) {
       redirect('/profile/setup')
     }
     
+    // If redirectTo is provided and valid, use it (for attendance scan flow)
+    if (validatedInput.redirectTo) {
+      // Validate that redirectTo is a safe path (starts with /)
+      const redirectPath = validatedInput.redirectTo
+      if (redirectPath.startsWith('/') && !redirectPath.startsWith('//')) {
+        redirect(redirectPath)
+      }
+    }
+    
+    // Default redirect based on role
     const redirectPath = typedProfile.role === 'admin' 
       ? '/admin/dashboard' 
       : '/student/dashboard'

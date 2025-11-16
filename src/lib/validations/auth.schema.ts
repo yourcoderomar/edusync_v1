@@ -17,6 +17,9 @@ export const signInSchema = z.object({
     .string()
     .min(1, 'Password is required')
     .min(6, 'Password must be at least 6 characters'),
+  redirectTo: z
+    .string()
+    .optional(),
 })
 
 export const signUpSchema = z.object({

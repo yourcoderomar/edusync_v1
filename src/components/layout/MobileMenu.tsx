@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
-import { signOut } from '@/lib/actions/auth/signout'
+import { SignOutButton } from '@/components/auth/SignOutButton'
 
 interface NavItem {
   name: string
@@ -92,17 +92,13 @@ export function MobileMenu({ navItems, pendingRequestsCount = 0 }: MobileMenuPro
               <div className="border-t border-gray-200 my-2" />
               
               {/* Sign Out */}
-              <form action={async () => {
-                await signOut()
-              }}>
-                <button
-                  type="submit"
-                  className="w-full text-left px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </button>
-              </form>
+              <div className="px-4 py-2">
+                <SignOutButton 
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-700"
+                />
+              </div>
             </div>
           </div>
         </>

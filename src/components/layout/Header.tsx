@@ -1,11 +1,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut } from 'lucide-react'
 import { getUser, getUserProfile } from '@/lib/supabase/server'
 import { getPendingEnrollmentCount } from '@/lib/actions/enrollment/get-pending-count'
-import { Button } from '@/components/ui/button'
-import { signOut } from '@/lib/actions/auth/signout'
 import { MobileMenu } from '@/components/layout/MobileMenu'
+import { SignOutButton } from '@/components/auth/SignOutButton'
 import type { Database } from '@/types/database'
 
 type Profile = Database['public']['Tables']['profiles']['Row'] & {
@@ -33,10 +31,6 @@ const studentNavItems: NavItem[] = [
   { name: 'Profile', href: '/profile' },
 ]
 
-async function handleSignOut() {
-  'use server'
-  await signOut()
-}
 
 /**
  * Main header component with semantic HTML
@@ -102,18 +96,13 @@ export async function Header() {
             </div>
 
             {/* Desktop Sign Out Button - Hidden on mobile */}
-            <form action={handleSignOut} className="hidden md:block">
-              <Button 
-                type="submit" 
+            <div className="hidden md:block">
+              <SignOutButton 
                 variant="outline" 
                 size="sm"
                 className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors"
-                aria-label="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign out</span>
-              </Button>
-            </form>
+              />
+            </div>
 
             {/* Mobile Burger Menu - Hidden on desktop */}
             <div className="md:hidden">

@@ -33,8 +33,6 @@ interface AttendanceFormProps {
  * @security Client-side validation + server-side validation
  */
 export function AttendanceForm({ classId, sessionId, students }: AttendanceFormProps) {
-  console.log('🟢 AttendanceForm component rendered', { classId, sessionId, studentsCount: students.length })
-  
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,12 +67,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
 
   // Set up real-time subscription for attendance updates
   useEffect(() => {
-    console.log('🔵 Setting up real-time subscription for session:', sessionId)
-    console.log('🔵 Supabase client:', supabase ? '✅ Created' : '❌ Missing')
-    console.log('🔵 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || '❌ Not set')
-    
     if (!sessionId) {
-      console.error('❌ No sessionId provided, cannot set up subscription')
       return
     }
 
@@ -94,7 +87,6 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          console.log('📡 Real-time attendance update received:', payload)
           
           // Handle INSERT or UPDATE events
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -154,22 +146,10 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
         }
       )
       .subscribe((status, err) => {
-        console.log('🔵 Subscription status changed:', status)
-        if (err) {
-          console.error('❌ Subscription error:', err)
-        }
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription connected for attendance:', sessionId)
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error. Make sure Realtime is enabled for the attendance table in Supabase.')
-          console.error('Error details:', err)
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Real-time subscription error. Make sure Realtime is enabled for the attendance table in Supabase.', err)
         } else if (status === 'TIMED_OUT') {
-          console.warn('⏱️ Real-time subscription timed out')
-        } else if (status === 'CLOSED') {
-          console.log('🔌 Real-time subscription closed')
-        } else {
-          console.log('🔵 Subscription status:', status)
+          console.warn('Real-time subscription timed out')
         }
       })
 
@@ -178,7 +158,6 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     // Cleanup subscription on unmount
     return () => {
       if (channelRef.current) {
-        console.log('🧹 Cleaning up real-time subscription')
         supabase.removeChannel(channelRef.current)
       }
     }

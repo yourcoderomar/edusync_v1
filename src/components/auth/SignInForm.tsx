@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -18,6 +19,8 @@ import { Loader } from '@/components/common/Loader'
  * @security Client-side validation + server-side action
  */
 export function SignInForm() {
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirectTo')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -34,7 +37,10 @@ export function SignInForm() {
     setIsLoading(true)
     setError(null)
 
-    const result = await signIn(data)
+    const result = await signIn({
+      ...data,
+      redirectTo: redirectTo || undefined,
+    })
 
     if (result && !result.success) {
       setError(result.error)
