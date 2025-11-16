@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/utils/format'
 
 export const metadata: Metadata = {
@@ -26,13 +28,13 @@ export default async function StudentDashboardPage() {
   const [enrolledClassesResult, quizAttemptsResult] = await Promise.all([
     supabase
       .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('student_id', user.id),
+      .select('class_id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
     supabase
       .from('quiz_attempts')
       .select('id', { count: 'exact', head: true })
       .eq('student_id', user.id)
-      .eq('status', 'graded'),
+      .not('score', 'is', null),
   ])
 
   const stats = [
@@ -48,23 +50,59 @@ export default async function StudentDashboardPage() {
     },
   ]
 
-  // Fetch enrolled classes
-  const { data: enrolledClasses } = await supabase
+  // Fetch enrolled classes with class details in parallel
+  type Enrollment = {
+    class_id: string
+    user_id: string
+    enrolled_at: string
+  }
+
+  type ClassData = {
+    id: string
+    name: string
+    description: string | null
+  }
+
+  type EnrollmentWithClass = Enrollment & {
+    classes: ClassData | null
+  }
+
+  // Fetch enrollments first to get class IDs
+  const { data: enrollments, error: enrollmentsError } = await supabase
     .from('enrollments')
-    .select(`
-      id,
-      enrolled_at,
-      classes:class_id (
-        id,
-        name,
-        description
-      )
-    `)
-    .eq('student_id', user.id)
+    .select('class_id, user_id, enrolled_at')
+    .eq('user_id', user.id)
     .order('enrolled_at', { ascending: false })
     .limit(5)
   
-  const classesList = (enrolledClasses || []) as Array<{ id: string; enrolled_at: string; classes: any }>
+  if (enrollmentsError) {
+    console.error('Error fetching enrollments:', enrollmentsError)
+  }
+
+  let classesList: EnrollmentWithClass[] = []
+
+  if (enrollments && enrollments.length > 0) {
+    const enrollmentsList = enrollments as Enrollment[]
+    const classIds = enrollmentsList.map(e => e.class_id)
+    
+    // Fetch classes in parallel (could be optimized further with a join, but RLS makes it complex)
+    const { data: classes, error: classesError } = await supabase
+      .from('classes')
+      .select('id, name, description')
+      .in('id', classIds)
+
+    if (classesError) {
+      console.error('Error fetching classes:', classesError)
+    }
+
+    // Combine enrollments with class data
+    const classesListData = (classes || []) as ClassData[]
+    const classesMap = new Map(classesListData.map(c => [c.id, c]))
+    classesList = enrollmentsList.map(enrollment => ({
+      ...enrollment,
+      classes: classesMap.get(enrollment.class_id) || null
+    }))
+  }
 
   return (
     <>
@@ -99,10 +137,19 @@ export default async function StudentDashboardPage() {
       <section aria-labelledby="enrolled-classes-heading">
         <Card>
           <CardHeader>
-            <CardTitle id="enrolled-classes-heading">My Classes</CardTitle>
-            <CardDescription>
-              Classes you are currently enrolled in
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle id="enrolled-classes-heading">My Classes</CardTitle>
+                <CardDescription>
+                  Classes you are currently enrolled in
+                </CardDescription>
+              </div>
+              {classesList.length > 0 && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/student/classes">View All</Link>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {classesList.length === 0 ? (
@@ -113,16 +160,23 @@ export default async function StudentDashboardPage() {
               <div className="space-y-4">
                 {classesList.map((enrollment) => {
                   const classData = enrollment.classes as any
+                  if (!classData || !classData.id) return null
                   return (
-                    <article key={enrollment.id} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
-                      <h3 className="font-medium text-gray-900">{classData.name}</h3>
-                      {classData.description && (
-                        <p className="mt-1 text-sm text-gray-600">{classData.description}</p>
-                      )}
-                      <time className="mt-1 block text-xs text-gray-500" dateTime={enrollment.enrolled_at}>
-                        Enrolled {formatDate(enrollment.enrolled_at)}
-                      </time>
-                    </article>
+                    <Link
+                      key={`${enrollment.class_id}-${enrollment.user_id}`}
+                      href={`/student/classes/${classData.id}`}
+                      className="block"
+                    >
+                      <article className="border-b border-gray-200 pb-4 last:border-0 last:pb-0 hover:bg-gray-50 p-3 -m-3 rounded-lg transition-colors">
+                        <h3 className="font-medium text-gray-900">{classData.name}</h3>
+                        {classData.description && (
+                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">{classData.description}</p>
+                        )}
+                        <time className="mt-1 block text-xs text-gray-500" dateTime={enrollment.enrolled_at}>
+                          Enrolled {formatDate(enrollment.enrolled_at)}
+                        </time>
+                      </article>
+                    </Link>
                   )
                 })}
               </div>

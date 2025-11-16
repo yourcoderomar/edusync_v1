@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, isAdmin } from '@/lib/supabase/server'
 import { handleServerError, isRealError } from '@/lib/utils/errors'
 
 /**
@@ -11,25 +11,68 @@ import { handleServerError, isRealError } from '@/lib/utils/errors'
 export async function getQuizzesBySession(sessionId: string) {
   try {
     const supabase = await createClient()
+    const userIsAdmin = await isAdmin()
 
-    const { data, error } = await supabase
+    // Query quizzes for this session
+    // RLS will automatically filter:
+    // - Admins: RLS policy "admin_manage_quizzes" allows ALL operations (published and unpublished)
+    // - Students: RLS policy "students_read_published_quizzes" only allows published quizzes where enrolled
+    // 
+    // Note: RLS policies are OR'd together, so if admin policy matches, it bypasses student policy
+    const result = await supabase
       .from('quizzes')
-      .select(`
-        *,
-        session:class_sessions!quizzes_session_id_fkey(id, session_date, class_id),
-        creator:profiles!quizzes_created_by_fkey(id, full_name)
-      `)
+      .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
+    
+    const quizzes = result.data
+    const error = result.error
 
     if (error && isRealError(error)) {
       console.error('Quizzes fetch error:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       throw error
     }
 
+    if (!quizzes || quizzes.length === 0) {
+      return {
+        success: true,
+        data: [],
+      }
+    }
+
+    // Fetch session and creator data separately to avoid RLS issues with foreign keys
+    const quizIds = quizzes.map(q => q.id)
+    const creatorIds = [...new Set(quizzes.map(q => q.created_by).filter(Boolean))]
+    
+    const [sessionsResult, creatorsResult] = await Promise.all([
+      supabase
+        .from('class_sessions')
+        .select('id, session_date, class_id')
+        .eq('id', sessionId)
+        .maybeSingle(),
+      creatorIds.length > 0
+        ? supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', creatorIds)
+        : { data: [] }
+    ])
+
+    const session = sessionsResult.data
+    const creators = creatorsResult.data || []
+    const creatorsMap = new Map(creators.map((c: any) => [c.id, c]))
+
+    // Combine data
+    const quizzesWithRelations = quizzes.map((quiz: any) => ({
+      ...quiz,
+      session: session || null,
+      creator: creatorsMap.get(quiz.created_by) || null,
+    }))
+
     return {
       success: true,
-      data: data || [],
+      data: quizzesWithRelations,
     }
   } catch (error) {
     return handleServerError(error, 'Failed to fetch quizzes')

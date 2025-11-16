@@ -144,16 +144,67 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
       .eq('session_id', sessionId)
       .in('student_id', studentIds)
 
+    // Get quiz grades from submitted quiz attempts for quizzes in this session
+    // This will get the latest quiz grade even if attendance hasn't been marked yet
+    // First, get all quizzes for this session
+    const { data: sessionQuizzes } = await supabase
+      .from('quizzes')
+      .select('id')
+      .eq('session_id', sessionId)
+
+    const quizScoresMap = new Map<string, number>()
+    
+    if (sessionQuizzes && sessionQuizzes.length > 0) {
+      const quizIds = sessionQuizzes.map(q => q.id)
+      
+      // Get all submitted quiz attempts for these quizzes
+      const { data: quizAttempts } = await supabase
+        .from('quiz_attempts')
+        .select('student_id, score, submitted_at')
+        .in('quiz_id', quizIds)
+        .in('student_id', studentIds)
+        .not('submitted_at', 'is', null)
+        .not('score', 'is', null)
+
+      if (quizAttempts) {
+        // Get the latest quiz score for each student
+        const quizGradesMap = new Map<string, { score: number; submittedAt: string }>()
+        
+        quizAttempts.forEach((attempt: any) => {
+          const studentId = attempt.student_id
+          const score = attempt.score
+          const submittedAt = attempt.submitted_at
+
+          if (!studentId || score === null || !submittedAt) return
+
+          // Only keep the latest submission for each student
+          const existing = quizGradesMap.get(studentId)
+          if (!existing || new Date(submittedAt) > new Date(existing.submittedAt)) {
+            quizGradesMap.set(studentId, { score, submittedAt })
+          }
+        })
+
+        // Convert to simple score map
+        quizGradesMap.forEach((value, studentId) => {
+          quizScoresMap.set(studentId, value.score)
+        })
+      }
+    }
+
     // Merge existing attendance with student data
+    // Priority: attendance quiz_grade > latest quiz attempt score
     const attendanceData = (existingAttendance || []) as Array<{ student_id: string; status: string; notes: string | null; quiz_grade: number | null }>
     const studentsData = (students || []) as Array<{ id: string; full_name: string | null; phone: string | null; profile_picture_url: string | null }>
     const studentsWithAttendance = studentsData.map(student => {
       const existing = attendanceData.find(a => a.student_id === student.id)
+      // Use quiz grade from attendance if exists, otherwise use latest quiz attempt score
+      const quizGrade = existing?.quiz_grade ?? quizScoresMap.get(student.id) ?? null
+      
       return {
         ...student,
         currentStatus: existing?.status || null,
         currentNotes: existing?.notes || '',
-        currentQuizGrade: existing?.quiz_grade || null,
+        currentQuizGrade: quizGrade,
       }
     }) || []
 

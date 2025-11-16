@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils/format'
 import { Target, User, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import Image from 'next/image'
 import { DeleteQuizButton } from '@/components/quizzes/DeleteQuizButton'
+import { PublishQuizButton } from '@/components/quizzes/PublishQuizButton'
 
 interface QuizDetailsPageProps {
   params: Promise<{ classId: string; sessionId: string; quizId: string }>
@@ -69,6 +70,12 @@ export default async function QuizDetailsPage({ params }: QuizDetailsPageProps) 
             )}
           </div>
           <div className="flex gap-3">
+            <PublishQuizButton
+              quizId={quizId}
+              isPublished={quiz.is_published}
+              classId={classId}
+              sessionId={sessionId}
+            />
             <DeleteQuizButton
               quizId={quizId}
               sessionId={sessionId}

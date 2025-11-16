@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
 import { FileText, Calendar } from 'lucide-react'
+import { PublishQuizButton } from '@/components/quizzes/PublishQuizButton'
 
 interface ClassQuizzesPageProps {
   params: Promise<{ classId: string }>
@@ -111,13 +112,31 @@ export default async function ClassQuizzesPage({ params }: ClassQuizzesPageProps
                       Created by {creator.full_name}
                     </p>
                   )}
+                  
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      quiz.is_published 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {quiz.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
 
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t space-y-2">
                     <Button asChild className="w-full" size="sm">
                       <Link href={`/admin/classes/${classId}/sessions/${session?.id}/quizzes/${quiz.id}`}>
                         View details
                       </Link>
                     </Button>
+                    <PublishQuizButton
+                      quizId={quiz.id}
+                      isPublished={quiz.is_published}
+                      classId={classId}
+                      sessionId={session?.id}
+                      size="sm"
+                      variant="outline"
+                    />
                   </div>
                 </CardContent>
               </Card>
