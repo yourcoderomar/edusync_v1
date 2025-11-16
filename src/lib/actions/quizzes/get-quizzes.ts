@@ -16,13 +16,16 @@ export async function getQuizzesBySession(sessionId: string) {
       .from('quizzes')
       .select(`
         *,
-        session:class_sessions!inner(id, session_date, class_id),
+        session:class_sessions!quizzes_session_id_fkey(id, session_date, class_id),
         creator:profiles!quizzes_created_by_fkey(id, full_name)
       `)
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
 
-    if (error && isRealError(error)) throw error
+    if (error && isRealError(error)) {
+      console.error('Quizzes fetch error:', error)
+      throw error
+    }
 
     return {
       success: true,
@@ -47,13 +50,16 @@ export async function getQuizById(quizId: string) {
       .from('quizzes')
       .select(`
         *,
-        session:class_sessions!inner(id, session_date, class_id),
+        session:class_sessions!quizzes_session_id_fkey(id, session_date, class_id),
         creator:profiles!quizzes_created_by_fkey(id, full_name)
       `)
       .eq('id', quizId)
       .single()
 
-    if (quizError && isRealError(quizError)) throw quizError
+    if (quizError && isRealError(quizError)) {
+      console.error('Quiz fetch error:', quizError)
+      throw quizError
+    }
 
     // Get questions with options
     const { data: questions, error: questionsError } = await supabase
@@ -68,15 +74,22 @@ export async function getQuizById(quizId: string) {
     if (questionsError && isRealError(questionsError)) throw questionsError
 
     // Sort options by order_index for each question
-    const questionsWithSortedOptions = questions?.map(question => ({
+    const questionsList = (questions || []) as Array<{ [key: string]: any; options?: Array<{ order_index: number }> }>
+    const questionsWithSortedOptions = questionsList.map(question => ({
       ...question,
       options: question.options?.sort((a: any, b: any) => a.order_index - b.order_index) || []
-    })) || []
+    }))
+
+    // Type assertion for quiz
+    if (!quiz) {
+      throw new Error('Quiz not found')
+    }
+    const typedQuiz = quiz as { [key: string]: any }
 
     return {
       success: true,
       data: {
-        ...quiz,
+        ...typedQuiz,
         questions: questionsWithSortedOptions,
       },
     }
@@ -101,9 +114,10 @@ export async function getQuizStats(quizId: string) {
 
     if (error && isRealError(error)) throw error
 
-    const totalAttempts = attempts?.length || 0
-    const completedAttempts = attempts?.filter(a => a.submitted_at)?.length || 0
-    const scores = attempts?.filter(a => a.score !== null).map(a => a.score as number) || []
+    const attemptsList = (attempts || []) as Array<{ id: string; score: number | null; submitted_at: string | null; student_id: string }>
+    const totalAttempts = attemptsList.length
+    const completedAttempts = attemptsList.filter(a => a.submitted_at).length
+    const scores = attemptsList.filter(a => a.score !== null).map(a => a.score as number)
     const averageScore = scores.length > 0 
       ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
       : 0
@@ -119,6 +133,41 @@ export async function getQuizStats(quizId: string) {
     }
   } catch (error) {
     return handleServerError(error, 'Failed to fetch quiz statistics')
+  }
+}
+
+/**
+ * Get detailed quiz attempts with student information
+ * 
+ * @security Server-side only, protected by RLS
+ */
+export async function getQuizAttempts(quizId: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data: attempts, error } = await supabase
+      .from('quiz_attempts')
+      .select(`
+        id,
+        score,
+        started_at,
+        submitted_at,
+        student:profiles!quiz_attempts_student_id_fkey(id, full_name, phone, profile_picture_url)
+      `)
+      .eq('quiz_id', quizId)
+      .order('started_at', { ascending: false })
+
+    if (error && isRealError(error)) {
+      console.error('Quiz attempts fetch error:', error)
+      throw error
+    }
+
+    return {
+      success: true,
+      data: attempts || [],
+    }
+  } catch (error) {
+    return handleServerError(error, 'Failed to fetch quiz attempts')
   }
 }
 

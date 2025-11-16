@@ -37,7 +37,7 @@ export async function createSession(input: CreateSessionInput) {
         starts_at: validatedData.startsAt || null,
         ends_at: validatedData.endsAt || null,
         created_by: user.id,
-      })
+      } as never)
       .select()
       .single()
 

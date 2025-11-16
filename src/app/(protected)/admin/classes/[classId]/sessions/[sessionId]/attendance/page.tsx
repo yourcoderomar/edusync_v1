@@ -71,8 +71,10 @@ export default async function SessionAttendancePage({ params }: AttendancePagePr
 
   const session = sessionResult.data
   const classData = session.classes as any
-  const attendance = attendanceResult.success ? attendanceResult.data : []
-  const stats = statsResult.success ? statsResult.data : { total: 0, present: 0, absent: 0, late: 0, excused: 0 }
+  const attendance = attendanceResult.success && attendanceResult.data ? attendanceResult.data : []
+  const stats = statsResult.success && statsResult.data 
+    ? statsResult.data 
+    : { total: 0, present: 0, absent: 0, late: 0, excused: 0 }
 
   return (
     <>

@@ -16,15 +16,18 @@ export async function generateMetadata({ params }: ClassAttendancePageProps): Pr
   const { classId } = await params
   const result = await getClassById(classId)
   
-  if (!result.success || !result.data) {
+  // Type guard: check if result has data
+  if (result.success) {
+    // Type assertion: when success is true, data exists
+    const classData = (result as { success: true; data: { name: string } }).data
     return {
-      title: 'Class Not Found',
+      title: `Attendance - ${classData.name}`,
+      description: `View all attendance records for ${classData.name}`,
     }
   }
 
   return {
-    title: `Attendance - ${result.data.name}`,
-    description: `View all attendance records for ${result.data.name}`,
+    title: 'Class Not Found',
   }
 }
 
@@ -61,12 +64,15 @@ export default async function ClassAttendancePage({ params }: ClassAttendancePag
     getAttendanceByClass(classId),
   ])
 
-  if (!classResult.success || !classResult.data) {
+  if (!classResult.success) {
     notFound()
   }
 
-  const classData = classResult.data
-  const attendance = attendanceResult.success ? attendanceResult.data : []
+  // Type assertion: when success is true, data exists
+  const classData = (classResult as { success: true; data: any }).data
+  const attendance = attendanceResult.success 
+    ? (attendanceResult as { success: true; data: any }).data 
+    : []
 
   // Calculate overall stats
   const stats = {

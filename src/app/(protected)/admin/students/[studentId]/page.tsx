@@ -25,17 +25,19 @@ export async function generateMetadata({ params }: StudentDetailsPageProps): Pro
   const { studentId } = await params
   const result = await getStudentById(studentId)
   
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return {
       title: 'Student Not Found',
     }
   }
 
-  const { student } = result.data
+  // Type assertion: when success is true, data exists
+  const studentData = (result as { success: true; data: { student: any } }).data
+  const student = studentData.student
 
   return {
-    title: student.full_name || 'Student',
-    description: `View details and performance for ${student.full_name || 'student'}`,
+    title: student?.full_name || 'Student',
+    description: `View details and performance for ${student?.full_name || 'student'}`,
   }
 }
 
@@ -49,11 +51,12 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
   const { studentId } = await params
   const result = await getStudentById(studentId)
 
-  if (!result.success || !result.data) {
+  if (!result.success) {
     notFound()
   }
 
-  const { student, enrollments, quizAttempts } = result.data
+  // Type assertion: when success is true, data exists
+  const { student, enrollments, quizAttempts } = (result as { success: true; data: { student: any; enrollments: any[]; quizAttempts: any[] } }).data
 
   return (
     <>
@@ -83,6 +86,11 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
               {student.phone && (
                 <p className="mt-2 text-gray-600">
                   <span className="text-gray-500">Phone:</span> {student.phone}
+                </p>
+              )}
+              {(student as any).parent_phone_number && (
+                <p className="mt-1 text-gray-600">
+                  <span className="text-gray-500">Parent Phone:</span> {(student as any).parent_phone_number}
                 </p>
               )}
               <p className="mt-1 text-sm text-gray-500">

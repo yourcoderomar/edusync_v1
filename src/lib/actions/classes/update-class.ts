@@ -32,7 +32,7 @@ export async function updateClass(input: UpdateClassInput) {
 
     const { data, error } = await supabase
       .from('classes')
-      .update(updateData)
+      .update(updateData as never)
       .eq('id', validatedInput.id)
       .select()
       .single()

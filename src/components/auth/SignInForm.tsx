@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { signInSchema, type SignInInput } from '@/lib/validations/auth.schema'
 import { signIn } from '@/lib/actions/auth/signin'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ import { Loader } from '@/components/common/Loader'
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -55,7 +57,7 @@ export function SignInForm() {
 
       <div className="space-y-2">
         <Label htmlFor="email">
-          Email address <span className="text-red-600" aria-label="required">*</span>
+          Email address
         </Label>
         <Input
           id="email"
@@ -75,17 +77,32 @@ export function SignInForm() {
 
       <div className="space-y-2">
         <Label htmlFor="password">
-          Password <span className="text-red-600" aria-label="required">*</span>
+          Password
         </Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="••••••••"
-          aria-invalid={!!errors.password}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-          {...register('password')}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            placeholder="••••••••"
+            className="pr-10"
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? 'password-error' : undefined}
+            {...register('password')}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
         {errors.password && (
           <p id="password-error" className="text-sm text-red-600" role="alert">
             {errors.password.message}
@@ -109,9 +126,9 @@ export function SignInForm() {
         )}
       </Button>
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm text-gray-700">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+        <Link href="/signup" className="font-semibold text-blue-700 hover:text-blue-800 underline-offset-2 hover:underline">
           Sign up
         </Link>
       </p>

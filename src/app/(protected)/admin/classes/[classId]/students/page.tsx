@@ -48,7 +48,7 @@ export default async function ClassStudentsPage({ params }: ClassStudentsPagePro
   }
 
   const classData = classResult.data
-  const enrollments = studentsResult.success ? studentsResult.data : []
+  const enrollments = studentsResult.success && studentsResult.data ? studentsResult.data : []
 
   return (
     <>

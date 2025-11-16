@@ -37,7 +37,7 @@ export async function createClass(input: CreateClassInput) {
         name: validatedInput.name,
         description: validatedInput.description,
         teacher_id: user.id,
-      })
+      } as never)
       .select()
       .single()
 

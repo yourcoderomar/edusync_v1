@@ -21,7 +21,7 @@ export async function getAttendanceBySession(sessionId: string) {
       .from('attendance')
       .select(`
         *,
-        student:profiles!attendance_student_id_fkey(id, full_name, phone),
+        student:profiles!attendance_student_id_fkey(id, full_name, phone, parent_phone_number),
         marked_by_user:profiles!attendance_marked_by_fkey(id, full_name)
       `)
       .eq('session_id', sessionId)
@@ -63,12 +63,13 @@ export async function getAttendanceStats(sessionId: string) {
       return { success: false, error: 'Failed to fetch attendance stats' }
     }
 
+    const attendanceData = (data || []) as Array<{ status: 'present' | 'absent' | 'late' | 'excused' }>
     const stats = {
-      total: data.length,
-      present: data.filter(a => a.status === 'present').length,
-      absent: data.filter(a => a.status === 'absent').length,
-      late: data.filter(a => a.status === 'late').length,
-      excused: data.filter(a => a.status === 'excused').length,
+      total: attendanceData.length,
+      present: attendanceData.filter(a => a.status === 'present').length,
+      absent: attendanceData.filter(a => a.status === 'absent').length,
+      late: attendanceData.filter(a => a.status === 'late').length,
+      excused: attendanceData.filter(a => a.status === 'excused').length,
     }
 
     return { success: true, data: stats }
@@ -107,7 +108,7 @@ export async function getAttendanceByClass(classId: string) {
       return { success: true, data: [] }
     }
 
-    const sessionIds = sessions.map(s => s.id)
+    const sessionIds = (sessions as Array<{ id: string }>).map(s => s.id)
 
     // Get all attendance for these sessions
     const { data, error } = await supabase

@@ -6,17 +6,23 @@ import { z } from 'zod'
  * @security All inputs are validated and sanitized
  */
 
-export const updateProfileSchema = z.object({
+export const profileUpdateSchema = z.object({
   fullName: z
     .string()
     .min(1, 'Full name is required')
     .max(100, 'Full name is too long')
     .trim()
     .optional(),
-  email: z
+  phone: z
     .string()
-    .email('Invalid email address')
-    .toLowerCase()
+    .min(1, 'Phone number is required')
+    .max(20, 'Phone number is too long')
+    .trim()
+    .optional(),
+  parentPhone: z
+    .string()
+    .min(1, 'Parent phone number is required')
+    .max(20, 'Parent phone number is too long')
     .trim()
     .optional(),
 })
@@ -31,6 +37,6 @@ export const uploadPictureSchema = z.object({
     ),
 })
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>
 export type UploadPictureInput = z.infer<typeof uploadPictureSchema>
 

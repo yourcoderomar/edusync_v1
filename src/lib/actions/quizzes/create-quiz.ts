@@ -33,40 +33,47 @@ export async function createQuiz(formData: unknown) {
       .single()
 
     // Create quiz
+    const typedSession = session as { class_id: string } | null
     const { data: quiz, error: quizError } = await supabase
       .from('quizzes')
       .insert({
         session_id: validatedData.sessionId,
-        class_id: session?.class_id,
+        class_id: typedSession?.class_id,
         title: validatedData.title,
         description: validatedData.description,
         // Note: time_limit and passing_score don't exist in database
         created_by: user.id,
-      })
+      } as never)
       .select()
       .single()
 
     if (quizError) throw quizError
+
+    // Type assertion for quiz
+    const typedQuiz = quiz as { id: string }
 
     // Create questions and options
     for (const question of validatedData.questions) {
       const { data: createdQuestion, error: questionError } = await supabase
         .from('quiz_questions')
         .insert({
-          quiz_id: quiz.id,
+          quiz_id: typedQuiz.id,
           question_text: question.questionText,
           // Note: question_type and points don't exist in database
           order_index: question.orderNumber,
-        })
+        } as never)
         .select()
         .single()
 
       if (questionError) throw questionError
 
+      // Type assertion for createdQuestion
+      const typedQuestion = createdQuestion as { id: string }
+
       // Create options if provided
       if (question.options && question.options.length > 0) {
         const optionsToInsert = question.options.map(option => ({
-          question_id: createdQuestion.id,
+          question_id: typedQuestion.id,
           option_text: option.optionText,
           is_correct: option.isCorrect,
           order_index: option.orderNumber,
@@ -74,16 +81,16 @@ export async function createQuiz(formData: unknown) {
 
         const { error: optionsError } = await supabase
           .from('quiz_options')
-          .insert(optionsToInsert)
+          .insert(optionsToInsert as never)
 
         if (optionsError) throw optionsError
       }
     }
 
     // Revalidate paths
-    if (session) {
-      revalidatePath(`/admin/classes/${session.class_id}/sessions/${validatedData.sessionId}`)
-      revalidatePath(`/admin/classes/${session.class_id}/sessions/${validatedData.sessionId}/quizzes`)
+    if (typedSession) {
+      revalidatePath(`/admin/classes/${typedSession.class_id}/sessions/${validatedData.sessionId}`)
+      revalidatePath(`/admin/classes/${typedSession.class_id}/sessions/${validatedData.sessionId}/quizzes`)
     }
 
     return {

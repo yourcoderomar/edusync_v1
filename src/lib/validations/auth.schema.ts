@@ -39,9 +39,22 @@ export const signUpSchema = z.object({
     .min(1, 'Full name is required')
     .max(100, 'Full name is too long')
     .trim(),
-  role: z.enum(['admin', 'student'], {
-    required_error: 'Please select a role',
-  }),
+  phoneCountryCode: z
+    .string()
+    .min(1, 'Phone country code is required'),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .max(20, 'Phone number is too long')
+    .trim(),
+  parentPhoneCountryCode: z
+    .string()
+    .min(1, 'Parent phone country code is required'),
+  parentPhone: z
+    .string()
+    .min(1, 'Parent phone number is required')
+    .max(20, 'Parent phone number is too long')
+    .trim(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
 
@@ -33,6 +34,33 @@ export async function createClient() {
             // user sessions.
           }
         },
+      },
+    }
+  )
+}
+
+/**
+ * Creates an admin Supabase client with service role key
+ * This bypasses RLS policies - USE WITH EXTREME CAUTION
+ * 
+ * @security 
+ * - ONLY use for trusted server-side operations
+ * - Never expose to client
+ * - Bypasses ALL RLS policies
+ * - Use only when necessary (e.g., user creation, admin operations)
+ */
+export function createAdminClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+  }
+
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   )
@@ -89,7 +117,8 @@ export async function getUserProfile() {
  */
 export async function isAdmin() {
   const profile = await getUserProfile()
-  return profile?.role === 'admin'
+  const typedProfile = profile as { role: 'admin' | 'student' } | null
+  return typedProfile?.role === 'admin'
 }
 
 /**
@@ -99,6 +128,7 @@ export async function isAdmin() {
  */
 export async function isStudent() {
   const profile = await getUserProfile()
-  return profile?.role === 'student'
+  const typedProfile = profile as { role: 'admin' | 'student' } | null
+  return typedProfile?.role === 'student'
 }
 

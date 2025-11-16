@@ -48,7 +48,7 @@ export default async function ClassSessionsPage({ params }: SessionsPageProps) {
   }
 
   const classData = classResult.data
-  const sessions = sessionsResult.success ? sessionsResult.data : []
+  const sessions = sessionsResult.success && sessionsResult.data ? sessionsResult.data : []
 
   return (
     <>

@@ -1,9 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { Search } from 'lucide-react'
 import { markBulkAttendance } from '@/lib/actions/attendance/mark-attendance'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -34,6 +36,11 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(new Set())
+  const supabase = createClient()
+  const channelRef = useRef<any>(null)
+  
   const [attendanceData, setAttendanceData] = useState<Record<string, {
     status: 'present' | 'absent' | ''
     notes: string
@@ -58,6 +65,102 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     }, {} as Record<string, { status: 'present' | 'absent' | ''; notes: string; quizGrade: string }>)
   )
 
+  // Set up real-time subscription for attendance updates
+  useEffect(() => {
+    // Subscribe to attendance changes for this session
+    const channel = supabase
+      .channel(`attendance:${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'attendance',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          console.log('📡 Real-time attendance update:', payload)
+          
+          // Handle INSERT or UPDATE events
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newRecord = payload.new as any
+            const studentId = newRecord.student_id
+            
+            // Only update if this student is in our list
+            if (students.some(s => s.id === studentId)) {
+              // Map status to our format
+              let mappedStatus: 'present' | 'absent' | '' = ''
+              if (newRecord.status === 'present' || newRecord.status === 'late' || newRecord.status === 'excused') {
+                mappedStatus = 'present'
+              } else if (newRecord.status === 'absent') {
+                mappedStatus = 'absent'
+              }
+              
+              // Update attendance data
+              setAttendanceData(prev => ({
+                ...prev,
+                [studentId]: {
+                  status: mappedStatus,
+                  notes: newRecord.notes || '',
+                  quizGrade: newRecord.quiz_grade?.toString() || '',
+                },
+              }))
+              
+              // Show visual indicator that this was updated
+              setRecentlyUpdated(prev => new Set(prev).add(studentId))
+              
+              // Remove the indicator after 3 seconds
+              setTimeout(() => {
+                setRecentlyUpdated(prev => {
+                  const newSet = new Set(prev)
+                  newSet.delete(studentId)
+                  return newSet
+                })
+              }, 3000)
+            }
+          }
+          
+          // Handle DELETE events (if attendance is removed)
+          if (payload.eventType === 'DELETE') {
+            const oldRecord = payload.old as any
+            const studentId = oldRecord.student_id
+            
+            if (students.some(s => s.id === studentId)) {
+              setAttendanceData(prev => ({
+                ...prev,
+                [studentId]: {
+                  status: '',
+                  notes: '',
+                  quizGrade: '',
+                },
+              }))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
+    }
+  }, [sessionId, students, supabase])
+
+  // Filter students based on search query
+  const filteredStudents = students.filter((student) => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase().trim()
+    const name = student.full_name?.toLowerCase() || ''
+    const phone = student.phone?.toLowerCase() || ''
+    
+    return name.includes(query) || phone.includes(query)
+  })
+
   const updateStudent = (studentId: string, field: 'status' | 'notes' | 'quizGrade', value: string) => {
     setAttendanceData(prev => ({
       ...prev,
@@ -78,15 +181,6 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     }))
   }
 
-  const markAllAs = (status: 'present' | 'absent') => {
-    setAttendanceData(prev => {
-      const updated = { ...prev }
-      Object.keys(updated).forEach(studentId => {
-        updated[studentId].status = status
-      })
-      return updated
-    })
-  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,38 +248,63 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
         </div>
       )}
 
-      {/* Quick Actions */}
+      {/* Search Bar */}
       <Card>
-        <CardContent className="flex gap-2 pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => markAllAs('present')}
-            disabled={isSubmitting}
-          >
-            All Attended
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => markAllAs('absent')}
-            disabled={isSubmitting}
-          >
-            All Absent
-          </Button>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search students by name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              disabled={isSubmitting}
+            />
+          </div>
+          {searchQuery && (
+            <p className="mt-2 text-sm text-gray-600">
+              Showing {filteredStudents.length} of {students.length} students
+            </p>
+          )}
         </CardContent>
       </Card>
 
       {/* Student Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {students.map((student) => {
+      {filteredStudents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Search className="h-12 w-12 text-gray-300 mb-3" />
+            <p className="text-gray-600">
+              {searchQuery ? 'No students found matching your search' : 'No students to display'}
+            </p>
+            {searchQuery && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="mt-4"
+              >
+                Clear search
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStudents.map((student) => {
           const status = attendanceData[student.id]?.status || ''
           const isAttended = status === 'present'
+          const wasRecentlyUpdated = recentlyUpdated.has(student.id)
 
           return (
-            <Card key={student.id} className="overflow-hidden">
+            <Card 
+              key={student.id} 
+              className={`overflow-hidden transition-all duration-300 ${
+                wasRecentlyUpdated ? 'ring-2 ring-green-500 ring-offset-2 bg-green-50' : ''
+              }`}
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center space-y-4">
                   {/* Student Image */}
@@ -217,7 +336,12 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
                   </div>
 
                   {/* Student Name */}
-                  <div>
+                  <div className="relative w-full">
+                    {wasRecentlyUpdated && (
+                      <span className="absolute -top-2 -right-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-500 text-white animate-pulse">
+                        ✓ Just updated
+                      </span>
+                    )}
                     <h3 className="font-semibold text-lg text-gray-900">
                       {student.full_name || 'Unknown Student'}
                     </h3>
@@ -277,7 +401,8 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
             </Card>
           )
         })}
-      </div>
+        </div>
+      )}
 
       {/* Submit Buttons */}
       <div className="flex gap-4 sticky bottom-0 bg-white p-4 border-t rounded-lg shadow-lg">

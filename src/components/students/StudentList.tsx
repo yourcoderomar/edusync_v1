@@ -1,15 +1,14 @@
 import { StudentCard } from './StudentCard'
 
-interface Student {
-  id: string
-  email: string
-  full_name: string | null
-  picture_url: string | null
-  created_at: string
-}
-
 interface StudentListProps {
-  students: Student[]
+  students: Array<{
+    id: string
+    full_name: string | null
+    profile_picture_url: string | null
+    phone: string | null
+    created_at: string
+    [key: string]: any // Allow additional properties like enrolledClasses
+  }>
 }
 
 /**

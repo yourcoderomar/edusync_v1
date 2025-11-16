@@ -23,7 +23,7 @@ export default function SignUpPage() {
         <h2 className="text-2xl font-bold text-gray-900">
           Create your account
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm font-medium text-gray-700">
           Get started with EduSync today
         </p>
       </header>

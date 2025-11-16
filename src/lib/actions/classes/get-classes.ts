@@ -1,7 +1,17 @@
 'use server'
 
 import { createClient, getUser } from '@/lib/supabase/server'
-import { logError, getErrorMessage } from '@/lib/utils/errors'
+import { logError, getErrorMessage, type ActionResult } from '@/lib/utils/errors'
+import type { Database } from '@/types/database'
+
+type ClassWithCreator = Database['public']['Tables']['classes']['Row'] & {
+  creator: {
+    id: string
+    full_name: string | null
+    phone: string | null
+    role: 'admin' | 'student'
+  } | null
+}
 
 /**
  * Get all classes for admin
@@ -42,7 +52,7 @@ export async function getClasses() {
  * 
  * @security Enforced by RLS policies
  */
-export async function getClassById(classId: string) {
+export async function getClassById(classId: string): Promise<ActionResult<ClassWithCreator>> {
   try {
     const user = await getUser()
     if (!user) {

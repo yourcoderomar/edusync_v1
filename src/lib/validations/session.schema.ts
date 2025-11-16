@@ -13,12 +13,30 @@ export const createSessionSchema = z.object({
     .refine((date) => !isNaN(Date.parse(date)), 'Invalid date format'),
   startsAt: z
     .string()
-    .refine((date) => !isNaN(Date.parse(date)), 'Invalid start time')
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (time) => {
+        if (time === null) return true
+        // Validate HH:MM format or full ISO datetime string
+        const timePattern = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
+        return timePattern.test(time) || !isNaN(Date.parse(time))
+      },
+      'Invalid start time'
+    )
     .optional()
     .nullable(),
   endsAt: z
     .string()
-    .refine((date) => !isNaN(Date.parse(date)), 'Invalid end time')
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (time) => {
+        if (time === null) return true
+        // Validate HH:MM format or full ISO datetime string
+        const timePattern = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
+        return timePattern.test(time) || !isNaN(Date.parse(time))
+      },
+      'Invalid end time'
+    )
     .optional()
     .nullable(),
 })

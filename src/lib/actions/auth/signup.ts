@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { signUpSchema, type SignUpInput } from '@/lib/validations/auth.schema'
+import { signUpSchema } from '@/lib/validations/auth.schema'
 import { getErrorMessage, logError } from '@/lib/utils/errors'
 
 /**
@@ -11,25 +11,45 @@ import { getErrorMessage, logError } from '@/lib/utils/errors'
  * 
  * @security
  * - Validates input with Zod
- * - Creates auth user and profile in transaction-like manner
+ * - Creates auth user and profile via database trigger
  * - Uses Supabase auth
  * - Sets secure HTTP-only cookies
  */
-export async function signUp(input: SignUpInput) {
+export async function signUp(formData: FormData) {
   try {
+    // Extract form data
+    const input = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+      confirmPassword: formData.get('password') as string, // For validation
+      fullName: formData.get('fullName') as string,
+      phone: formData.get('phone') as string,
+      parentPhone: formData.get('parentPhone') as string,
+    }
+
+    // Debug log to see what we're receiving
+    console.log('📥 Sign up form data:', {
+      email: input.email,
+      fullName: input.fullName,
+      phone: input.phone,
+      parentPhone: input.parentPhone,
+    })
+
     // Validate input
     const validatedInput = signUpSchema.parse(input)
 
     const supabase = await createClient()
 
-    // Sign up with Supabase
+    // Sign up with Supabase (all users are students by default)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: validatedInput.email,
       password: validatedInput.password,
       options: {
         data: {
           full_name: validatedInput.fullName,
-          role: validatedInput.role,
+          phone: validatedInput.phone,
+          parent_phone_number: validatedInput.parentPhone,
+          role: 'student',
         },
       },
     })
@@ -48,35 +68,12 @@ export async function signUp(input: SignUpInput) {
       }
     }
 
-    // Create profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authData.user.id,
-        email: validatedInput.email,
-        full_name: validatedInput.fullName,
-        role: validatedInput.role,
-      })
+    // Profile is now created automatically by database trigger
+    console.log('✅ Profile created automatically by database trigger for user:', authData.user.id)
 
-    if (profileError) {
-      // If profile creation fails, we should clean up the auth user
-      // but Supabase doesn't provide a way to delete users from client
-      logError(profileError, 'signUp - profile creation')
-      
-      return {
-        success: false,
-        error: 'Failed to create profile. Please contact support.',
-      }
-    }
-
-    // Revalidate and redirect
+    // Revalidate and redirect to student dashboard
     revalidatePath('/', 'layout')
-    
-    const redirectPath = validatedInput.role === 'admin' 
-      ? '/admin/dashboard' 
-      : '/student/dashboard'
-    
-    redirect(redirectPath)
+    redirect('/student/dashboard')
   } catch (error) {
     // redirect() throws a special error that should not be caught
     if (error && typeof error === 'object' && 'digest' in error) {

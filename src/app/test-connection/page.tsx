@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/server'
  */
 export default async function TestConnectionPage() {
   let connectionStatus = 'Unknown'
-  let error = null
-  let tables = []
+  let error: string | null = null
+  let tables: Array<{ id: string; email: string; role: string }> = []
 
   try {
     const supabase = await createClient()

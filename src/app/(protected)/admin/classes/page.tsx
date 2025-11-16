@@ -55,7 +55,7 @@ export default async function AdminClassesPage() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {result.data.map((classItem) => (
+            {(result as { success: true; data: any[] }).data.map((classItem) => (
               <article key={classItem.id}>
                 <Link href={`/admin/classes/${classItem.id}`}>
                   <Card className="h-full transition-shadow hover:shadow-md">

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { getSessionById } from '@/lib/actions/sessions/get-sessions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SendMessageButton } from '@/components/sessions/SendMessageButton'
 import { formatDate } from '@/lib/utils/format'
 
 interface SessionDetailsPageProps {
@@ -43,7 +44,7 @@ export default async function SessionDetailsPage({ params }: SessionDetailsPageP
     notFound()
   }
 
-  const session = result.data
+  const session = result.data as any // Type assertion for fields that may exist in DB but not in types
   const classData = session.classes as any
   const creator = session.creator as any
 
@@ -122,12 +123,13 @@ export default async function SessionDetailsPage({ params }: SessionDetailsPageP
             <CardTitle>Attendance</CardTitle>
             <CardDescription>Track student attendance</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <Button asChild className="w-full" variant="outline">
               <Link href={`/admin/classes/${classId}/sessions/${sessionId}/attendance`}>
                 View attendance
               </Link>
             </Button>
+            <SendMessageButton sessionId={sessionId} />
           </CardContent>
         </Card>
 

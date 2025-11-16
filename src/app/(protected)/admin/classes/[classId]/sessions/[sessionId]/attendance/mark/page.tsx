@@ -5,6 +5,7 @@ import { getSessionById } from '@/lib/actions/sessions/get-sessions'
 import { getStudentsForAttendance } from '@/lib/actions/attendance/mark-attendance'
 import { Button } from '@/components/ui/button'
 import { AttendanceForm } from '@/components/attendance/AttendanceForm'
+import { AttendanceQRCode } from '@/components/attendance/AttendanceQRCode'
 import { formatDate } from '@/lib/utils/format'
 
 interface MarkAttendancePageProps {
@@ -51,7 +52,7 @@ export default async function MarkAttendancePage({ params }: MarkAttendancePageP
 
   const session = sessionResult.data
   const classData = session.classes as any
-  const students = studentsResult.success ? studentsResult.data : []
+  const students = studentsResult.success && studentsResult.data ? studentsResult.data : []
 
   return (
     <>
@@ -75,6 +76,13 @@ export default async function MarkAttendancePage({ params }: MarkAttendancePageP
           </Button>
         </div>
       </header>
+
+      {/* QR Code Section */}
+      {students.length > 0 && (
+        <div className="mb-8">
+          <AttendanceQRCode sessionId={sessionId} classId={classId} />
+        </div>
+      )}
 
       {!studentsResult.success ? (
         <div className="rounded-md bg-red-50 p-4">

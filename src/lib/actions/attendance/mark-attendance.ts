@@ -60,7 +60,7 @@ export async function markBulkAttendance(input: BulkMarkAttendanceInput) {
     // Upsert attendance records (insert or update if exists)
     const { error } = await supabase
       .from('attendance')
-      .upsert(records, {
+      .upsert(records as never, {
         onConflict: 'session_id,student_id',
       })
 
@@ -122,7 +122,7 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
       return { success: true, data: [] }
     }
 
-    const studentIds = enrollments.map(e => e.user_id)
+    const studentIds = (enrollments as Array<{ user_id: string }>).map(e => e.user_id)
 
     // Get student profiles
     const { data: students, error: studentsError } = await supabase
@@ -145,8 +145,10 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
       .in('student_id', studentIds)
 
     // Merge existing attendance with student data
-    const studentsWithAttendance = students?.map(student => {
-      const existing = existingAttendance?.find(a => a.student_id === student.id)
+    const attendanceData = (existingAttendance || []) as Array<{ student_id: string; status: string; notes: string | null; quiz_grade: number | null }>
+    const studentsData = (students || []) as Array<{ id: string; full_name: string | null; phone: string | null; profile_picture_url: string | null }>
+    const studentsWithAttendance = studentsData.map(student => {
+      const existing = attendanceData.find(a => a.student_id === student.id)
       return {
         ...student,
         currentStatus: existing?.status || null,

@@ -48,6 +48,8 @@ export default async function AdminDashboardPage() {
     .select('id, name, description, created_at')
     .order('created_at', { ascending: false })
     .limit(5)
+  
+  const classesList = (recentClasses || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
 
   return (
     <>
@@ -88,11 +90,11 @@ export default async function AdminDashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!recentClasses || recentClasses.length === 0 ? (
+            {classesList.length === 0 ? (
               <p className="text-sm text-gray-500">No classes yet. Create your first class to get started!</p>
             ) : (
               <div className="space-y-4">
-                {recentClasses.map((classItem) => (
+                {classesList.map((classItem) => (
                   <article key={classItem.id} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
                     <h3 className="font-medium text-gray-900">{classItem.name}</h3>
                     {classItem.description && (

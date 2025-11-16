@@ -9,8 +9,8 @@ import { z } from 'zod'
 export const markAttendanceSchema = z.object({
   sessionId: z.string().uuid('Invalid session ID'),
   studentId: z.string().uuid('Invalid student ID'),
-  status: z.enum(['present', 'absent', 'late', 'excused'], {
-    required_error: 'Attendance status is required',
+  status: z.enum(['present', 'absent', 'late', 'excused']).refine(val => val !== undefined, {
+    message: 'Attendance status is required',
   }),
   notes: z.string().max(500, 'Notes too long').optional().nullable(),
   quizGrade: z.number().min(0).max(100).optional().nullable(),

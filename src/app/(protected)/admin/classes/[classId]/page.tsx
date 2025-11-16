@@ -14,15 +14,18 @@ export async function generateMetadata({ params }: ClassDetailsPageProps): Promi
   const { classId } = await params
   const result = await getClassById(classId)
   
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return {
       title: 'Class Not Found',
     }
   }
 
+  // Type assertion: when success is true, data exists
+  const classData = (result as { success: true; data: { name: string; description: string | null } }).data
+
   return {
-    title: result.data.name,
-    description: result.data.description || `View details and manage ${result.data.name}`,
+    title: classData.name,
+    description: classData.description || `View details and manage ${classData.name}`,
   }
 }
 

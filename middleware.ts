@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/signin', '/signup']
+  const publicRoutes = ['/signin', '/signup', '/attendance/scan']
   const isPublicRoute = publicRoutes.includes(pathname)
   
   // If user is not authenticated
@@ -33,17 +33,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // User is authenticated - get their profile to check role
+  // User is authenticated - get their profile to check role and profile picture
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, profile_picture_url')
     .eq('id', user.id)
     .single()
+
+  // Allow access to profile setup page
+  const isProfileSetupRoute = pathname === '/profile/setup'
+  
+  // Type assertion for profile_picture_url which exists in actual database
+  type ProfileWithPicture = { role: 'admin' | 'student'; profile_picture_url: string | null }
+  const typedProfile = profile as ProfileWithPicture | null
+  
+  // Check if profile picture is missing - redirect to setup (except if already on setup page)
+  if (typedProfile && !typedProfile.profile_picture_url && !isProfileSetupRoute) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/profile/setup'
+    return NextResponse.redirect(redirectUrl)
+  }
 
   // If authenticated user tries to access auth pages, redirect to dashboard
   if (isPublicRoute) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = profile?.role === 'admin' 
+    redirectUrl.pathname = typedProfile?.role === 'admin' 
       ? '/admin/dashboard' 
       : '/student/dashboard'
     return NextResponse.redirect(redirectUrl)
@@ -54,14 +68,14 @@ export async function middleware(request: NextRequest) {
   const isStudentRoute = pathname.startsWith('/student')
 
   // Protect admin routes
-  if (isAdminRoute && profile?.role !== 'admin') {
+  if (isAdminRoute && typedProfile?.role !== 'admin') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/student/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
   // Protect student routes
-  if (isStudentRoute && profile?.role !== 'student') {
+  if (isStudentRoute && typedProfile?.role !== 'student') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/admin/dashboard'
     return NextResponse.redirect(redirectUrl)

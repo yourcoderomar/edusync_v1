@@ -63,6 +63,8 @@ export default async function StudentDashboardPage() {
     .eq('student_id', user.id)
     .order('enrolled_at', { ascending: false })
     .limit(5)
+  
+  const classesList = (enrolledClasses || []) as Array<{ id: string; enrolled_at: string; classes: any }>
 
   return (
     <>
@@ -103,13 +105,13 @@ export default async function StudentDashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!enrolledClasses || enrolledClasses.length === 0 ? (
+            {classesList.length === 0 ? (
               <p className="text-sm text-gray-500">
                 You are not enrolled in any classes yet. Browse available classes to get started!
               </p>
             ) : (
               <div className="space-y-4">
-                {enrolledClasses.map((enrollment) => {
+                {classesList.map((enrollment) => {
                   const classData = enrollment.classes as any
                   return (
                     <article key={enrollment.id} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">

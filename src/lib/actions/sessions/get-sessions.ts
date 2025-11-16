@@ -1,7 +1,19 @@
 'use server'
 
 import { createClient, isAdmin } from '@/lib/supabase/server'
-import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
+import { logError, getErrorMessage, ForbiddenError, type ActionResult } from '@/lib/utils/errors'
+import type { Database } from '@/types/database'
+
+type SessionWithRelations = Database['public']['Tables']['class_sessions']['Row'] & {
+  creator: {
+    id: string
+    full_name: string | null
+  } | null
+  classes: {
+    id: string
+    name: string
+  } | null
+}
 
 /**
  * Get all sessions for a specific class
@@ -43,7 +55,7 @@ export async function getSessionsByClass(classId: string) {
  * 
  * @security Enforced by RLS policies
  */
-export async function getSessionById(sessionId: string) {
+export async function getSessionById(sessionId: string): Promise<ActionResult<SessionWithRelations>> {
   try {
     const userIsAdmin = await isAdmin()
     if (!userIsAdmin) {

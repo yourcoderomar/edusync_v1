@@ -4,6 +4,14 @@
  * @security Never expose sensitive information in error messages
  */
 
+/**
+ * Discriminated union type for server action results
+ * TypeScript can automatically narrow based on the 'success' property
+ */
+export type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
+
 export class AppError extends Error {
   constructor(
     message: string,

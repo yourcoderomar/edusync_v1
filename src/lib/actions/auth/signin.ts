@@ -46,7 +46,7 @@ export async function signIn(input: SignInInput) {
     // Get user profile to determine redirect
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, profile_picture_url')
       .eq('id', data.user.id)
       .single()
 
@@ -69,7 +69,15 @@ export async function signIn(input: SignInInput) {
     // Revalidate and redirect
     revalidatePath('/', 'layout')
     
-    const redirectPath = profile.role === 'admin' 
+    // Type assertion: profile exists after null check
+    const typedProfile = profile as { role: 'admin' | 'student'; profile_picture_url: string | null }
+    
+    // Check if profile picture is missing - redirect to setup
+    if (!typedProfile.profile_picture_url) {
+      redirect('/profile/setup')
+    }
+    
+    const redirectPath = typedProfile.role === 'admin' 
       ? '/admin/dashboard' 
       : '/student/dashboard'
     

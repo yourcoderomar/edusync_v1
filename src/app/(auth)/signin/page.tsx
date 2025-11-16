@@ -23,7 +23,7 @@ export default function SignInPage() {
         <h2 className="text-2xl font-bold text-gray-900">
           Sign in to your account
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm font-medium text-gray-700">
           Enter your credentials to access your account
         </p>
       </header>
