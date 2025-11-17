@@ -24,10 +24,15 @@ export default async function ProtectedLayout({
   }
 
   // Type assertion: profile exists after null check
-  const typedProfile = profile as { role: 'admin' | 'student' }
+  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
 
   // Get pending enrollment count for admins
-  const pendingCount = typedProfile.role === 'admin' ? await getPendingEnrollmentCount() : 0
+  const pendingCount =
+    typedProfile.role === 'admin'
+      ? await getPendingEnrollmentCount()
+      : typedProfile.role === 'instructor'
+        ? await getPendingEnrollmentCount({ instructorId: typedProfile.id })
+        : 0
 
   return (
     <div className="flex min-h-screen flex-col">

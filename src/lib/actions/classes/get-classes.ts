@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, getUser } from '@/lib/supabase/server'
+import { createClient, getUser, getUserProfile } from '@/lib/supabase/server'
 import { logError, getErrorMessage, type ActionResult } from '@/lib/utils/errors'
 import type { Database } from '@/types/database'
 
@@ -8,8 +8,8 @@ type ClassWithCreator = Database['public']['Tables']['classes']['Row'] & {
   creator: {
     id: string
     full_name: string | null
-    phone: string | null
-    role: 'admin' | 'student'
+    phone?: string | null
+    role: 'admin' | 'student' | 'instructor'
   } | null
 }
 
@@ -26,14 +26,22 @@ export async function getClasses() {
     }
 
     const supabase = await createClient()
+    const profile = await getUserProfile()
+    const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' } | null
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('classes')
       .select(`
         *,
-        creator:profiles!classes_created_by_fkey(id, full_name, phone, role)
+        creator:profiles!classes_teacher_id_fkey(id, full_name, phone, role)
       `)
       .order('created_at', { ascending: false })
+
+    if (typedProfile?.role === 'instructor') {
+      query = query.eq('teacher_id', typedProfile.id)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       logError(error, 'getClasses')
@@ -65,7 +73,7 @@ export async function getClassById(classId: string): Promise<ActionResult<ClassW
       .from('classes')
       .select(`
         *,
-        creator:profiles!classes_created_by_fkey(id, full_name, phone, role)
+        creator:profiles!classes_teacher_id_fkey(id, full_name, phone, role)
       `)
       .eq('id', classId)
       .single()

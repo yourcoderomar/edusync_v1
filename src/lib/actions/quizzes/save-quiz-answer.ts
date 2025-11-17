@@ -39,8 +39,11 @@ export async function saveQuizAnswer(input: unknown) {
       }
     }
 
+    type AttemptRecord = { id: string; submitted_at: string | null }
+    const attemptRecord = attempt as AttemptRecord | null
+
     // Can't modify answers after submission
-    if (attempt.submitted_at) {
+    if (attemptRecord?.submitted_at) {
       return {
         success: false,
         error: 'Cannot modify answers after quiz submission.',
@@ -69,7 +72,9 @@ export async function saveQuizAnswer(input: unknown) {
       }
     }
 
-    const isCorrect = option.is_correct || false
+    type QuizOptionRecord = { is_correct: boolean | null }
+    const optionRecord = option as QuizOptionRecord | null
+    const isCorrect = optionRecord?.is_correct ?? false
 
     // Check if answer already exists
     const { data: existingAnswer } = await supabase
@@ -79,7 +84,10 @@ export async function saveQuizAnswer(input: unknown) {
       .eq('question_id', questionId)
       .maybeSingle()
 
-    if (existingAnswer) {
+    type QuizAnswerRecord = { id: string }
+    const existingAnswerRecord = existingAnswer as QuizAnswerRecord | null
+
+    if (existingAnswerRecord) {
       // Update existing answer
       const { error: updateError } = await supabase
         .from('quiz_answers')
@@ -87,7 +95,7 @@ export async function saveQuizAnswer(input: unknown) {
           option_id: selectedOptionId,
           is_correct: isCorrect,
         } as never)
-        .eq('id', existingAnswer.id)
+        .eq('id', existingAnswerRecord.id)
 
       if (updateError) throw updateError
     } else {

@@ -18,6 +18,11 @@ export const createClassSchema = z.object({
     .trim()
     .optional()
     .nullable(),
+  teacherId: z
+    .string()
+    .uuid('Select a valid instructor')
+    .optional()
+    .nullable(),
 })
 
 export const updateClassSchema = z.object({

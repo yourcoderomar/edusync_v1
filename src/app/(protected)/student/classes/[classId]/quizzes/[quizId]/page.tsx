@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatDate } from '@/lib/utils/format'
 import { CheckCircle2, XCircle, Clock, FileText } from 'lucide-react'
 import { TakeQuizForm } from '@/components/quizzes/TakeQuizForm'
+import type { Database } from '@/types/database'
 
 interface QuizViewPageProps {
   params: Promise<{ classId: string; quizId: string }>
@@ -23,11 +24,11 @@ export async function generateMetadata({ params }: QuizViewPageProps): Promise<M
     }
   }
 
-  const quiz = (result as { success: true; data: { title: string; description: string | null } }).data
+  const quiz = result.data as any
 
   return {
-    title: quiz.title,
-    description: quiz.description || `View quiz: ${quiz.title}`,
+    title: quiz?.title ?? 'Quiz Details',
+    description: quiz?.description || (quiz?.title ? `View quiz: ${quiz.title}` : undefined),
   }
 }
 
@@ -78,14 +79,15 @@ export default async function StudentQuizViewPage({ params }: QuizViewPageProps)
     notFound()
   }
 
-  const quiz = quizResult.data
-  const attempt = attemptResult.data
+  type QuizAttemptRow = Pick<Database['public']['Tables']['quiz_attempts']['Row'], 'id' | 'score' | 'started_at' | 'submitted_at'>
+  const quiz = quizResult.data as any
+  const attempt = (attemptResult.data || null) as QuizAttemptRow | null
   const questions = quiz.questions as any[]
   const session = quiz.session as any
   const creator = quiz.creator as any
 
   // Get student's answers for this attempt if it exists
-  let studentAnswers: Map<string, any> = new Map()
+  const studentAnswers: Map<string, any> = new Map()
   if (attempt) {
     const { data: answers } = await supabase
       .from('quiz_answers')
@@ -99,8 +101,10 @@ export default async function StudentQuizViewPage({ params }: QuizViewPageProps)
     }
   }
 
-  const isSubmitted = attempt && attempt.submitted_at
-  const hasScore = attempt && attempt.score !== null
+  const submittedAt = attempt?.submitted_at ?? null
+  const isSubmitted = submittedAt !== null
+  const scoreValue = typeof attempt?.score === 'number' ? attempt.score : null
+  const hasScore = scoreValue !== null
 
   // Get answers map for TakeQuizForm (convert to object for serialization)
   const answersObj: Record<string, string | null> = {}
@@ -175,24 +179,26 @@ export default async function StudentQuizViewPage({ params }: QuizViewPageProps)
                   <div>
                     <p className="text-sm text-gray-500">Submitted</p>
                     <p className="font-medium text-gray-900">
-                      {formatDate(attempt.submitted_at)}
+                      {submittedAt ? formatDate(submittedAt) : 'N/A'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {new Date(attempt.submitted_at).toLocaleTimeString('en-US', {
+                      {submittedAt
+                        ? new Date(submittedAt).toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
-                      })}
+                        })
+                        : '—'}
                     </p>
                   </div>
-                  {hasScore && (
+                  {hasScore && scoreValue !== null && (
                     <div>
                       <p className="text-sm text-gray-500">Score</p>
                       <p className={`text-3xl font-bold ${
-                        attempt.score >= 70 ? 'text-green-600' : 
-                        attempt.score >= 50 ? 'text-yellow-600' : 
+                        scoreValue >= 70 ? 'text-green-600' : 
+                        scoreValue >= 50 ? 'text-yellow-600' : 
                         'text-red-600'
                       }`}>
-                        {attempt.score}%
+                        {scoreValue}%
                       </p>
                     </div>
                   )}

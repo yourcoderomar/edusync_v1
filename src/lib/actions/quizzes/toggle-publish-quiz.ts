@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { handleServerError } from '@/lib/utils/errors'
 
 /**
@@ -12,12 +12,12 @@ import { handleServerError } from '@/lib/utils/errors'
 export async function togglePublishQuiz(quizId: string, classId?: string, sessionId?: string) {
   try {
     const supabase = await createClient()
-    const userIsAdmin = await isAdmin()
+    const canManageQuiz = await isAdminOrInstructor()
 
-    if (!userIsAdmin) {
+    if (!canManageQuiz) {
       return {
         success: false,
-        error: 'Unauthorized. Admin access required.',
+        error: 'Unauthorized. Admin or instructor access required.',
       }
     }
 
@@ -42,12 +42,19 @@ export async function togglePublishQuiz(quizId: string, classId?: string, sessio
       }
     }
 
+    type QuizRecord = {
+      is_published: boolean
+      class_id: string | null
+      session_id: string | null
+    }
+    const quizRecord = quiz as QuizRecord
+
     // Toggle publish status
-    const newPublishStatus = !quiz.is_published
+    const newPublishStatus = !quizRecord.is_published
 
     const { error: updateError } = await supabase
       .from('quizzes')
-      .update({ is_published: newPublishStatus })
+      .update({ is_published: newPublishStatus } as never)
       .eq('id', quizId)
 
     if (updateError) {

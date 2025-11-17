@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 
 /**
@@ -10,9 +10,9 @@ import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
  */
 export async function getAttendanceBySession(sessionId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view attendance')
+    const canViewAttendance = await isAdminOrInstructor()
+    if (!canViewAttendance) {
+      throw new ForbiddenError('Only admins or instructors can view attendance')
     }
 
     const supabase = await createClient()
@@ -46,9 +46,9 @@ export async function getAttendanceBySession(sessionId: string) {
  */
 export async function getAttendanceStats(sessionId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view attendance stats')
+    const canViewStats = await isAdminOrInstructor()
+    if (!canViewStats) {
+      throw new ForbiddenError('Only admins or instructors can view attendance stats')
     }
 
     const supabase = await createClient()
@@ -86,9 +86,9 @@ export async function getAttendanceStats(sessionId: string) {
  */
 export async function getAttendanceByClass(classId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view attendance')
+    const canViewAttendance = await isAdminOrInstructor()
+    if (!canViewAttendance) {
+      throw new ForbiddenError('Only admins or instructors can view attendance')
     }
 
     const supabase = await createClient()

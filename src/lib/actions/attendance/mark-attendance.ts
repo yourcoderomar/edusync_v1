@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, isAdmin, getUser } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor, getUser } from '@/lib/supabase/server'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 import { markAttendanceSchema, bulkMarkAttendanceSchema, type BulkMarkAttendanceInput } from '@/lib/validations/attendance.schema'
 
@@ -14,9 +14,9 @@ export async function markBulkAttendance(input: BulkMarkAttendanceInput) {
   try {
     console.log('📥 Received attendance data:', JSON.stringify(input, null, 2))
     
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can mark attendance')
+    const canManageAttendance = await isAdminOrInstructor()
+    if (!canManageAttendance) {
+      throw new ForbiddenError('Only admins or instructors can mark attendance')
     }
 
     const user = await getUser()
@@ -100,9 +100,9 @@ export async function markBulkAttendance(input: BulkMarkAttendanceInput) {
  */
 export async function getStudentsForAttendance(classId: string, sessionId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can access this')
+    const canManageAttendance = await isAdminOrInstructor()
+    if (!canManageAttendance) {
+      throw new ForbiddenError('Only admins or instructors can access this')
     }
 
     const supabase = await createClient()
@@ -147,14 +147,16 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
     // Get quiz grades from submitted quiz attempts for quizzes in this session
     // This will get the latest quiz grade even if attendance hasn't been marked yet
     // First, get all quizzes for this session
-    const { data: sessionQuizzes } = await supabase
+    const { data: sessionQuizzesData } = await supabase
       .from('quizzes')
       .select('id')
       .eq('session_id', sessionId)
 
     const quizScoresMap = new Map<string, number>()
     
-    if (sessionQuizzes && sessionQuizzes.length > 0) {
+    const sessionQuizzes = (sessionQuizzesData || []) as Array<{ id: string }>
+    
+    if (sessionQuizzes.length > 0) {
       const quizIds = sessionQuizzes.map(q => q.id)
       
       // Get all submitted quiz attempts for these quizzes

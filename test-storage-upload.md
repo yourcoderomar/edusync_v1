@@ -115,3 +115,4 @@ After successful upload:
 2. Database: `profiles.profile_picture_url` = `https://aqgqiipiposiuiulnjcl.supabase.co/storage/v1/object/public/profile-pictures/...`
 3. Image displays in the app
 
+

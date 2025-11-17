@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
 import { Calendar, Clock, CheckCircle2, XCircle, FileText, UserCheck } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 interface SessionViewPageProps {
   params: Promise<{ classId: string; sessionId: string }>
@@ -16,11 +17,18 @@ export async function generateMetadata({ params }: SessionViewPageProps): Promis
   const { sessionId } = await params
   const supabase = await createClient()
   
-  const { data: session } = await supabase
+  const { data: sessionData } = await supabase
     .from('class_sessions')
     .select('session_date, classes:class_id(name)')
     .eq('id', sessionId)
     .single()
+
+  type SessionMetadataRow = {
+    session_date: string
+    classes?: { name?: string | null } | null
+  }
+
+  const session = (sessionData || null) as SessionMetadataRow | null
 
   if (!session) {
     return {
@@ -28,7 +36,7 @@ export async function generateMetadata({ params }: SessionViewPageProps): Promis
     }
   }
 
-  const classData = session.classes as any
+  const classData = session.classes
 
   return {
     title: `Session - ${formatDate(session.session_date)}`,
@@ -65,43 +73,47 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
     notFound()
   }
 
-  // Fetch session data, attendance, and quizzes in parallel
-  const [sessionResult, attendanceResult, quizzesResult] = await Promise.all([
-    supabase
-      .from('class_sessions')
-      .select(`
-        id,
-        session_date,
-        starts_at,
-        ends_at,
-        classes:class_id (
-          id,
-          name
-        )
-      `)
-      .eq('id', sessionId)
-      .eq('class_id', classId)
-      .single(),
-    // Get student's attendance for this session
-    supabase
-      .from('attendance')
-      .select('id, status, marked_at')
-      .eq('session_id', sessionId)
-      .eq('student_id', user.id)
-      .maybeSingle(),
-    // Get quizzes for this session
-    getQuizzesBySession(sessionId),
-  ])
+  type SessionWithClass = Pick<Database['public']['Tables']['class_sessions']['Row'], 'id' | 'session_date' | 'starts_at' | 'ends_at'> & {
+    classes?: { id: string; name: string } | null
+  }
+  type AttendanceRow = Pick<Database['public']['Tables']['attendance']['Row'], 'id' | 'status' | 'marked_at'>
+  type QuizAttemptRow = Pick<Database['public']['Tables']['quiz_attempts']['Row'], 'quiz_id' | 'score' | 'submitted_at'>
 
-  if (!sessionResult.data) {
+  // Fetch session data, attendance, and quizzes
+  const { data: sessionData } = await supabase
+    .from('class_sessions')
+    .select(`
+      id,
+      session_date,
+      starts_at,
+      ends_at,
+      classes:class_id (
+        id,
+        name
+      )
+    `)
+    .eq('id', sessionId)
+    .eq('class_id', classId)
+    .single()
+
+  const { data: attendanceData } = await supabase
+    .from('attendance')
+    .select('id, status, marked_at')
+    .eq('session_id', sessionId)
+    .eq('student_id', user.id)
+    .maybeSingle()
+
+  const quizzesResult = await getQuizzesBySession(sessionId)
+
+  if (!sessionData) {
     notFound()
   }
 
-  const session = sessionResult.data as any
-  const classData = session.classes as any
-  const attendance = attendanceResult.data
+  const session = sessionData as SessionWithClass
+  const classData = session.classes
+  const attendance = (attendanceData || null) as AttendanceRow | null
   
-  if (!quizzesResult.success) {
+  if (!quizzesResult.success && 'error' in quizzesResult) {
     console.error('Error fetching quizzes:', quizzesResult.error)
   }
   
@@ -109,13 +121,15 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
 
   // Get quiz attempts for this student
   const quizIds = (quizzes as any[]).map(q => q.id)
-  const { data: quizAttempts } = quizIds.length > 0
+  const { data: quizAttemptsData } = quizIds.length > 0
     ? await supabase
         .from('quiz_attempts')
         .select('quiz_id, score, submitted_at')
         .eq('student_id', user.id)
         .in('quiz_id', quizIds)
     : { data: [] }
+
+  const quizAttempts = (quizAttemptsData || []) as QuizAttemptRow[]
 
   return (
     <>
@@ -266,9 +280,11 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
           ) : (
             <div className="space-y-3">
               {(quizzes as any[]).map((quiz) => {
-                const attempt = (quizAttempts || []).find((qa: any) => qa.quiz_id === quiz.id)
-                const isCompleted = attempt && attempt.submitted_at
-                const hasScore = attempt && attempt.score !== null
+                const attempt = quizAttempts.find((qa) => qa.quiz_id === quiz.id)
+                const attemptSubmittedAt = attempt?.submitted_at ?? null
+                const isCompleted = attemptSubmittedAt !== null
+                const scoreValue = typeof attempt?.score === 'number' ? attempt.score : null
+                const hasScore = scoreValue !== null
 
                 return (
                   <div
@@ -280,15 +296,15 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
                         <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
                         {isCompleted && (
                           <span className={`text-xs px-2 py-1 rounded-full ${
-                            hasScore && attempt.score >= 70
+                            hasScore && scoreValue !== null && scoreValue >= 70
                               ? 'bg-green-100 text-green-700'
-                              : hasScore && attempt.score >= 50
+                              : hasScore && scoreValue !== null && scoreValue >= 50
                               ? 'bg-yellow-100 text-yellow-700'
                               : hasScore
                               ? 'bg-red-100 text-red-700'
                               : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {hasScore ? `${attempt.score}%` : 'Submitted'}
+                            {hasScore && scoreValue !== null ? `${scoreValue}%` : 'Submitted'}
                           </span>
                         )}
                       </div>
@@ -297,9 +313,9 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
                           {quiz.description}
                         </p>
                       )}
-                      {isCompleted && hasScore && (
+                      {isCompleted && hasScore && attemptSubmittedAt && (
                         <p className="text-xs text-gray-400 mt-1">
-                          Completed on {formatDate(attempt.submitted_at)}
+                          Completed on {formatDate(attemptSubmittedAt)}
                         </p>
                       )}
                     </div>

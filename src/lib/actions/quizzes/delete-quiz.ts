@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { handleServerError } from '@/lib/utils/errors'
 
 /**
@@ -12,12 +12,12 @@ import { handleServerError } from '@/lib/utils/errors'
 export async function deleteQuiz(quizId: string, sessionId: string, classId: string) {
   try {
     const supabase = await createClient()
-    const userIsAdmin = await isAdmin()
+    const canManageQuiz = await isAdminOrInstructor()
 
-    if (!userIsAdmin) {
+    if (!canManageQuiz) {
       return {
         success: false,
-        error: 'Unauthorized. Admin access required.',
+        error: 'Unauthorized. Admin or instructor access required.',
       }
     }
 

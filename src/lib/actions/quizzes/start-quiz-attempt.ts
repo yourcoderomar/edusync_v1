@@ -35,11 +35,14 @@ export async function startQuizAttempt(input: unknown) {
       .limit(1)
       .maybeSingle()
 
+    type QuizAttemptRecord = { id: string; submitted_at: string | null }
+    const existingAttemptRecord = existingAttempt as QuizAttemptRecord | null
+
     // If there's an existing attempt that's not submitted, return it
-    if (existingAttempt && !existingAttempt.submitted_at) {
+    if (existingAttemptRecord && !existingAttemptRecord.submitted_at) {
       return {
         success: true,
-        data: { attemptId: existingAttempt.id },
+        data: { attemptId: existingAttemptRecord.id },
       }
     }
 
@@ -57,10 +60,14 @@ export async function startQuizAttempt(input: unknown) {
       .single()
 
     if (attemptError) throw attemptError
+    const attemptRecord = attempt as { id: string } | null
+    if (!attemptRecord) {
+      throw new Error('Failed to create quiz attempt')
+    }
 
     return {
       success: true,
-      data: { attemptId: attempt.id },
+      data: { attemptId: attemptRecord.id },
     }
   } catch (error) {
     return handleServerError(error, 'Failed to start quiz attempt')

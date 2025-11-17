@@ -144,9 +144,9 @@ export async function uploadProfilePicture(formData: FormData) {
       .eq('id', user.id)
       .single()
 
-    const typedProfile = profile as { role: 'admin' | 'student' } | null
-    const redirectPath = typedProfile?.role === 'admin' 
-      ? '/admin/dashboard' 
+    const typedProfile = profile as { role: 'admin' | 'student' | 'instructor' } | null
+    const redirectPath = typedProfile && (typedProfile.role === 'admin' || typedProfile.role === 'instructor')
+      ? '/admin/dashboard'
       : '/student/dashboard'
     
     redirect(redirectPath)

@@ -8,6 +8,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
 
+type EnrollmentWithStudent = {
+  user_id: string
+  enrolled_at: string
+  student: {
+    id: string
+    full_name: string | null
+    profile_picture_url: string | null
+    phone: string | null
+  } | null
+}
+
 interface ClassStudentsPageProps {
   params: Promise<{ classId: string }>
 }
@@ -48,7 +59,7 @@ export default async function ClassStudentsPage({ params }: ClassStudentsPagePro
   }
 
   const classData = classResult.data
-  const enrollments = studentsResult.success && studentsResult.data ? studentsResult.data : []
+  const enrollments = (studentsResult.success && studentsResult.data ? studentsResult.data : []) as EnrollmentWithStudent[]
 
   return (
     <>
@@ -90,7 +101,7 @@ export default async function ClassStudentsPage({ params }: ClassStudentsPagePro
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {enrollments.map((enrollment: any) => {
+            {enrollments.map((enrollment) => {
               const student = enrollment.student
               if (!student) return null
 

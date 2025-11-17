@@ -28,7 +28,7 @@ export default async function HomePage() {
       redirect('/profile/setup')
     }
 
-    if (profile.role === 'admin') {
+    if (profile.role === 'admin' || profile.role === 'instructor') {
       redirect('/admin/dashboard')
     }
   }

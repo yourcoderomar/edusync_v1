@@ -8,6 +8,32 @@ import { RequestEnrollmentButton } from '@/components/enrollment/RequestEnrollme
 import { formatDate } from '@/lib/utils/format'
 import { Clock, FileText, Plus, BookOpen } from 'lucide-react'
 
+type EnrollmentRequest = {
+  id: string
+  class_id: string
+  status: 'pending' | 'approved' | 'rejected'
+  notes: string | null
+  created_at: string
+  reviewed_at: string | null
+  class: {
+    id: string
+    name: string | null
+    description: string | null
+  } | null
+  reviewer?: {
+    full_name: string | null
+  } | null
+}
+
+type AvailableClass = {
+  id: string
+  name: string
+  description: string | null
+  creator?: {
+    full_name: string | null
+  } | null
+}
+
 export const metadata: Metadata = {
   title: 'Enrollment Requests',
   description: 'View your enrollment requests and request to join new classes',
@@ -25,11 +51,11 @@ export default async function StudentEnrollmentRequestsPage() {
     getAvailableClasses(),
   ])
 
-  const requests = requestsResult.success ? (requestsResult.data ?? []) : []
-  const availableClasses = availableClassesResult.success ? (availableClassesResult.data ?? []) : []
+  const requests = (requestsResult.success ? requestsResult.data ?? [] : []) as EnrollmentRequest[]
+  const availableClasses = (availableClassesResult.success ? availableClassesResult.data ?? [] : []) as AvailableClass[]
 
-  const pendingRequests = requests.filter((r: any) => r.status === 'pending')
-  const processedRequests = requests.filter((r: any) => r.status !== 'pending')
+  const pendingRequests = requests.filter((request) => request.status === 'pending')
+  const processedRequests = requests.filter((request) => request.status !== 'pending')
 
   return (
     <>
@@ -49,7 +75,7 @@ export default async function StudentEnrollmentRequestsPage() {
           </h2>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {availableClasses.map((classData: any) => {
+            {availableClasses.map((classData) => {
               const creator = classData.creator
 
               return (
@@ -89,7 +115,7 @@ export default async function StudentEnrollmentRequestsPage() {
           </h2>
           
           <div className="space-y-4">
-            {pendingRequests.map((request: any) => {
+            {pendingRequests.map((request) => {
               const classData = request.class
 
               return (
@@ -137,7 +163,7 @@ export default async function StudentEnrollmentRequestsPage() {
           </h2>
           
           <div className="space-y-4">
-            {processedRequests.map((request: any) => {
+            {processedRequests.map((request) => {
               const classData = request.class
               const reviewer = request.reviewer
 
@@ -161,7 +187,9 @@ export default async function StudentEnrollmentRequestsPage() {
 
                         <div className="text-sm text-gray-500 space-y-1">
                           <p>Reviewed by {reviewer?.full_name || 'Admin'}</p>
-                          <p>{formatDate(request.reviewed_at)}</p>
+                          <p>
+                            {request.reviewed_at ? formatDate(request.reviewed_at) : 'Pending review'}
+                          </p>
                         </div>
 
                         <div className="mt-4 flex gap-2">
@@ -198,7 +226,7 @@ export default async function StudentEnrollmentRequestsPage() {
             <FileText className="h-16 w-16 text-gray-300 mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No enrollment requests</h2>
             <p className="text-gray-600 text-center max-w-md">
-              You haven't made any enrollment requests yet. Available classes will appear here when they are created.
+              You haven&apos;t made any enrollment requests yet. Available classes will appear here when they are created.
             </p>
           </CardContent>
         </Card>

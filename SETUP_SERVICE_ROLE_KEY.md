@@ -116,3 +116,4 @@ In this app, the service role key is ONLY used for:
 - [Supabase Service Role Key Docs](https://supabase.com/docs/guides/api/api-keys)
 - [Row Level Security (RLS) Docs](https://supabase.com/docs/guides/auth/row-level-security)
 
+

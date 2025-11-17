@@ -130,8 +130,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const redirectPath = (profile as any)?.role === 'admin' 
-      ? '/admin/dashboard' 
+    const redirectRole = (profile as any)?.role
+    const redirectPath = redirectRole === 'admin' || redirectRole === 'instructor'
+      ? '/admin/dashboard'
       : '/student/dashboard'
 
     return NextResponse.json({

@@ -12,7 +12,7 @@ interface NavItem {
 }
 
 interface NavigationProps {
-  role: 'admin' | 'student'
+  role: 'admin' | 'student' | 'instructor'
   pendingRequestsCount?: number
 }
 
@@ -31,6 +31,13 @@ const studentNavItems: NavItem[] = [
   { name: 'Profile', href: '/profile' },
 ]
 
+const instructorNavItems: NavItem[] = [
+  { name: 'Dashboard', href: '/admin/dashboard' },
+  { name: 'Classes', href: '/admin/classes' },
+  { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },
+  { name: 'Profile', href: '/profile' },
+]
+
 /**
  * Navigation component with semantic HTML
  * 
@@ -39,7 +46,12 @@ const studentNavItems: NavItem[] = [
  */
 export function Navigation({ role, pendingRequestsCount = 0 }: NavigationProps) {
   const pathname = usePathname()
-  const navItems = role === 'admin' ? adminNavItems : studentNavItems
+  const navItemsMap: Record<NavigationProps['role'], NavItem[]> = {
+    admin: adminNavItems,
+    instructor: instructorNavItems,
+    student: studentNavItems,
+  }
+  const navItems = navItemsMap[role] || studentNavItems
 
   return (
     <nav 

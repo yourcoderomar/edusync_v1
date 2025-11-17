@@ -8,14 +8,40 @@ import { isRealError } from '@/lib/utils/errors'
  * 
  * @security Server-side only, protected by RLS
  */
-export async function getPendingEnrollmentCount() {
+interface PendingCountOptions {
+  instructorId?: string
+}
+
+export async function getPendingEnrollmentCount(options?: PendingCountOptions) {
   try {
     const supabase = await createClient()
 
-    const { count, error } = await supabase
+    let query = supabase
       .from('enrollment_requests')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('status', 'pending')
+
+    if (options?.instructorId) {
+      const { data: instructorClasses, error: classesError } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('teacher_id', options.instructorId)
+
+      if (classesError && isRealError(classesError)) {
+        console.error('Pending count classes fetch error:', classesError)
+        return 0
+      }
+
+      const classRows = (instructorClasses || []) as Array<{ id: string | null }>
+      const classIds = classRows.map((cls) => cls.id).filter((id): id is string => Boolean(id))
+      if (classIds.length === 0) {
+        return 0
+      }
+
+      query = query.in('class_id', classIds)
+    }
+
+    const { count, error } = await query
 
     if (error && isRealError(error)) {
       console.error('Pending count fetch error:', error)
@@ -28,4 +54,5 @@ export async function getPendingEnrollmentCount() {
     return 0
   }
 }
+
 

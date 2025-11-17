@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { getAttendanceBySession } from '@/lib/actions/attendance/get-attendance'
 import { getQuizzesBySession } from '@/lib/actions/quizzes/get-quizzes'
 import { getSessionById } from '@/lib/actions/sessions/get-sessions'
@@ -10,7 +10,7 @@ import { formatDate } from '@/lib/utils/format'
  * 
  * @security
  * - Validates user authentication
- * - Only admins can send messages
+ * - Only admins or instructors can send messages
  * - Uses authenticated client (respects RLS policies)
  */
 export async function POST(
@@ -21,10 +21,10 @@ export async function POST(
     const { sessionId } = await params
     
     // Check if user is admin
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
+    const canSendMessages = await isAdminOrInstructor()
+    if (!canSendMessages) {
       return NextResponse.json(
-        { success: false, error: 'Only admins can send messages' },
+        { success: false, error: 'Only admins or instructors can send messages' },
         { status: 403 }
       )
     }

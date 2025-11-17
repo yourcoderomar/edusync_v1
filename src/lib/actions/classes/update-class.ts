@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { updateClassSchema, type UpdateClassInput } from '@/lib/validations/class.schema'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 
@@ -18,9 +18,9 @@ export async function updateClass(input: UpdateClassInput) {
     // Validate input
     const validatedInput = updateClassSchema.parse(input)
 
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can update classes')
+    const canManageClasses = await isAdminOrInstructor()
+    if (!canManageClasses) {
+      throw new ForbiddenError('Only admins or instructors can update classes')
     }
 
     const supabase = await createClient()

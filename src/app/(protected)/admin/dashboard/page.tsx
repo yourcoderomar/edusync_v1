@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserProfile } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
 
@@ -16,40 +16,102 @@ export const metadata: Metadata = {
  */
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
+  const profile = await getUserProfile()
 
-  // Fetch dashboard statistics
-  const [classesResult, studentsResult, enrollmentRequestsResult] = await Promise.all([
-    supabase.from('classes').select('id', { count: 'exact', head: true }),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
-    supabase.from('enrollment_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-  ])
+  if (!profile) {
+    return null
+  }
 
-  const stats = [
-    {
-      title: 'Total Classes',
-      value: classesResult.count || 0,
-      description: 'Active classes you manage',
-    },
-    {
-      title: 'Total Students',
-      value: studentsResult.count || 0,
-      description: 'Registered students',
-    },
-    {
-      title: 'Pending Requests',
-      value: enrollmentRequestsResult.count || 0,
-      description: 'Enrollment requests awaiting approval',
-    },
-  ]
+  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+  const isAdminUser = typedProfile.role === 'admin'
 
-  // Fetch recent classes
-  const { data: recentClasses } = await supabase
-    .from('classes')
-    .select('id, name, description, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5)
-  
-  const classesList = (recentClasses || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
+  let stats: Array<{ title: string; value: number; description: string }> = []
+  let classesList: Array<{ id: string; name: string; description: string | null; created_at: string }> = []
+
+  if (isAdminUser) {
+    const [classesResult, studentsResult, enrollmentRequestsResult, recentClassesResult] = await Promise.all([
+      supabase.from('classes').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
+      supabase.from('enrollment_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase
+        .from('classes')
+        .select('id, name, description, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
+
+    stats = [
+      {
+        title: 'Total Classes',
+        value: classesResult.count || 0,
+        description: 'Active classes you manage',
+      },
+      {
+        title: 'Total Students',
+        value: studentsResult.count || 0,
+        description: 'Registered students',
+      },
+      {
+        title: 'Pending Requests',
+        value: enrollmentRequestsResult.count || 0,
+        description: 'Enrollment requests awaiting approval',
+      },
+    ]
+
+    classesList = (recentClassesResult.data || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
+  } else {
+    const { data: instructorClasses, count: instructorClassCount } = await supabase
+      .from('classes')
+      .select('id, name, description, created_at', { count: 'exact' })
+      .eq('teacher_id', typedProfile.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    const typedInstructorClasses =
+      (instructorClasses || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
+
+    const classIds = typedInstructorClasses.map((cls) => cls.id)
+
+    let studentsCount = 0
+    let pendingRequestsCount = 0
+
+    if (classIds.length > 0) {
+      const [studentsResult, requestsResult] = await Promise.all([
+        supabase
+          .from('enrollments')
+          .select('user_id', { count: 'exact', head: true })
+          .in('class_id', classIds),
+        supabase
+          .from('enrollment_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .in('class_id', classIds),
+      ])
+
+      studentsCount = studentsResult.count || 0
+      pendingRequestsCount = requestsResult.count || 0
+    }
+
+    stats = [
+      {
+        title: 'My Classes',
+        value: instructorClassCount || 0,
+        description: 'Classes assigned to you',
+      },
+      {
+        title: 'Enrolled Students',
+        value: studentsCount,
+        description: 'Students across your classes',
+      },
+      {
+        title: 'Pending Requests',
+        value: pendingRequestsCount,
+        description: 'Enrollment requests awaiting approval',
+      },
+    ]
+
+    classesList = typedInstructorClasses
+  }
 
   return (
     <>

@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { createClient, isAdmin, getUser } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor, getUser } from '@/lib/supabase/server'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 import { createSessionSchema, type CreateSessionInput } from '@/lib/validations/session.schema'
 
@@ -13,9 +12,9 @@ import { createSessionSchema, type CreateSessionInput } from '@/lib/validations/
  */
 export async function createSession(input: CreateSessionInput) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can create sessions')
+    const canCreateSession = await isAdminOrInstructor()
+    if (!canCreateSession) {
+      throw new ForbiddenError('Only admins or instructors can create sessions')
     }
 
     const user = await getUser()

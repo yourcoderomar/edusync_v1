@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClassForm } from '@/components/classes/ClassForm'
+import { createClient, getUserProfile } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
   title: 'Create Class',
@@ -12,7 +14,31 @@ export const metadata: Metadata = {
  * 
  * @semantic Uses semantic HTML with proper structure
  */
-export default function CreateClassPage() {
+export default async function CreateClassPage() {
+  const profile = await getUserProfile()
+
+  if (!profile) {
+    redirect('/signin')
+  }
+
+  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+  if (typedProfile.role === 'student') {
+    redirect('/student/dashboard')
+  }
+  const supabase = await createClient()
+
+  let instructors: Array<{ id: string; full_name: string | null }> = []
+
+  if (typedProfile.role === 'admin') {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'instructor')
+      .order('full_name', { ascending: true })
+
+    instructors = (data || []) as Array<{ id: string; full_name: string | null }>
+  }
+
   return (
     <>
       <header className="mb-8">
@@ -30,7 +56,11 @@ export default function CreateClassPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ClassForm />
+          <ClassForm
+            instructors={instructors}
+            currentUserRole={typedProfile.role}
+            currentUserId={typedProfile.id}
+          />
         </CardContent>
       </Card>
     </>

@@ -9,7 +9,7 @@ import { Loader } from '@/components/common/Loader'
 
 interface SignOutButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
   className?: string
   showIcon?: boolean
   children?: React.ReactNode

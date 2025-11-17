@@ -15,12 +15,12 @@ export default async function ProfileSetupPage() {
   }
 
   // Type assertion: profile exists after null check
-  const typedProfile = profile as { role: 'admin' | 'student'; profile_picture_url: string | null }
+  const typedProfile = profile as { role: 'admin' | 'student' | 'instructor'; profile_picture_url: string | null }
 
   // If profile picture already exists, redirect to dashboard
   if (typedProfile.profile_picture_url) {
-    const redirectPath = typedProfile.role === 'admin' 
-      ? '/admin/dashboard' 
+    const redirectPath = typedProfile.role === 'admin' || typedProfile.role === 'instructor'
+      ? '/admin/dashboard'
       : '/student/dashboard'
     redirect(redirectPath)
   }

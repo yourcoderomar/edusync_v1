@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { deleteClassSchema, type DeleteClassInput } from '@/lib/validations/class.schema'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 
@@ -18,9 +18,9 @@ export async function deleteClass(input: DeleteClassInput) {
     // Validate input
     const validatedInput = deleteClassSchema.parse(input)
 
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can delete classes')
+    const canManageClasses = await isAdminOrInstructor()
+    if (!canManageClasses) {
+      throw new ForbiddenError('Only admins or instructors can delete classes')
     }
 
     const supabase = await createClient()

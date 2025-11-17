@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
 import { Calendar, FileText, BookOpen, Users } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 interface ClassDetailsPageProps {
   params: Promise<{ classId: string }>
@@ -48,13 +49,17 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
 
   const supabase = await createClient()
 
+  type EnrollmentRow = Pick<Database['public']['Tables']['enrollments']['Row'], 'class_id' | 'user_id' | 'enrolled_at'>
+
   // Verify student is enrolled in this class
-  const { data: enrollment } = await supabase
+  const { data: enrollmentData } = await supabase
     .from('enrollments')
     .select('class_id, user_id, enrolled_at')
     .eq('user_id', user.id)
     .eq('class_id', classId)
     .single()
+
+  const enrollment = enrollmentData as EnrollmentRow | null
 
   if (!enrollment) {
     notFound()
@@ -100,12 +105,15 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
   const totalSessions = sessionsCountResult.count || 0
   
   // Get attendance stats
-  const attendanceRecords = attendanceResult.data || []
+  type AttendanceRow = Pick<Database['public']['Tables']['attendance']['Row'], 'id' | 'status'>
+  const attendanceRecords = (attendanceResult.data || []) as AttendanceRow[]
   const presentCount = attendanceRecords.filter(a => a.status === 'present').length
+
+  type QuizAttemptRow = Pick<Database['public']['Tables']['quiz_attempts']['Row'], 'quiz_id' | 'score' | 'submitted_at'>
 
   // Get quiz attempts for this student
   const quizIds = (quizzes as any[]).map(q => q.id)
-  const { data: quizAttempts } = quizIds.length > 0
+  const { data: quizAttemptData } = quizIds.length > 0
     ? await supabase
         .from('quiz_attempts')
         .select('quiz_id, score, submitted_at')
@@ -113,7 +121,8 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
         .in('quiz_id', quizIds)
     : { data: [] }
 
-  const completedQuizzes = (quizAttempts || []).filter((qa: any) => qa.submitted_at !== null).length
+  const quizAttempts = (quizAttemptData || []) as QuizAttemptRow[]
+  const completedQuizzes = quizAttempts.filter((qa) => qa.submitted_at !== null).length
 
   return (
     <>
@@ -277,7 +286,7 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
             ) : (
               <div className="space-y-3">
                 {(quizzes as any[]).slice(0, 5).map((quiz) => {
-                  const attempt = (quizAttempts || []).find((qa: any) => qa.quiz_id === quiz.id)
+                  const attempt = quizAttempts.find((qa) => qa.quiz_id === quiz.id)
                   const isCompleted = attempt && attempt.submitted_at
                   const session = quiz.session as any
                   

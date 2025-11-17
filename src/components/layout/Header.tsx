@@ -31,6 +31,13 @@ const studentNavItems: NavItem[] = [
   { name: 'Profile', href: '/profile' },
 ]
 
+const instructorNavItems: NavItem[] = [
+  { name: 'Dashboard', href: '/admin/dashboard' },
+  { name: 'Classes', href: '/admin/classes' },
+  { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },
+  { name: 'Profile', href: '/profile' },
+]
+
 
 /**
  * Main header component with semantic HTML
@@ -49,8 +56,21 @@ export async function Header() {
   // Type assertion for profile_picture_url which may exist in the actual database
   const profile = profileData as Profile
 
-  const navItems = profile.role === 'admin' ? adminNavItems : studentNavItems
-  const pendingCount = profile.role === 'admin' ? await getPendingEnrollmentCount() : 0
+  const navItemsMap: Record<Profile['role'], NavItem[]> = {
+    admin: adminNavItems,
+    student: studentNavItems,
+    instructor: instructorNavItems,
+  }
+
+  const navItems = navItemsMap[profile.role] || studentNavItems
+  const pendingCount =
+    profile.role === 'admin'
+      ? await getPendingEnrollmentCount()
+      : profile.role === 'instructor'
+        ? await getPendingEnrollmentCount({ instructorId: profile.id })
+        : 0
+
+  const dashboardPath = profile.role === 'student' ? '/student/dashboard' : '/admin/dashboard'
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
@@ -58,7 +78,7 @@ export async function Header() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link 
-              href={profile.role === 'admin' ? '/admin/dashboard' : '/student/dashboard'}
+              href={dashboardPath}
               className="flex items-center hover:opacity-80 transition-opacity"
               aria-label="Go to dashboard"
             >

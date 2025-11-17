@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { handleServerError, isRealError } from '@/lib/utils/errors'
 
 /**
@@ -11,7 +11,6 @@ import { handleServerError, isRealError } from '@/lib/utils/errors'
 export async function getQuizzesBySession(sessionId: string) {
   try {
     const supabase = await createClient()
-    const userIsAdmin = await isAdmin()
 
     // Query quizzes for this session
     // RLS will automatically filter:
@@ -41,9 +40,15 @@ export async function getQuizzesBySession(sessionId: string) {
       }
     }
 
+    const quizzesList = quizzes as Array<{
+      id: string
+      created_by: string | null
+      [key: string]: unknown
+    }>
+
     // Fetch session and creator data separately to avoid RLS issues with foreign keys
-    const quizIds = quizzes.map(q => q.id)
-    const creatorIds = [...new Set(quizzes.map(q => q.created_by).filter(Boolean))]
+    const quizIds = quizzesList.map(q => q.id)
+    const creatorIds = [...new Set(quizzesList.map(q => q.created_by).filter(Boolean))]
     
     const [sessionsResult, creatorsResult] = await Promise.all([
       supabase
@@ -60,14 +65,14 @@ export async function getQuizzesBySession(sessionId: string) {
     ])
 
     const session = sessionsResult.data
-    const creators = creatorsResult.data || []
-    const creatorsMap = new Map(creators.map((c: any) => [c.id, c]))
+    const creators = (creatorsResult.data || []) as Array<{ id: string }>
+    const creatorsMap = new Map(creators.map((c) => [c.id, c]))
 
     // Combine data
-    const quizzesWithRelations = quizzes.map((quiz: any) => ({
+    const quizzesWithRelations = quizzesList.map((quiz) => ({
       ...quiz,
       session: session || null,
-      creator: creatorsMap.get(quiz.created_by) || null,
+      creator: quiz.created_by ? creatorsMap.get(quiz.created_by) || null : null,
     }))
 
     return {

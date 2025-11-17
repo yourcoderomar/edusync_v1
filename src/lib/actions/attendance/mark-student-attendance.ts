@@ -34,7 +34,7 @@ export async function markStudentAttendance(sessionId: string, classId: string) 
       return { success: false, error: 'Failed to verify your account' }
     }
 
-    const typedProfile = profile as { id: string; role: 'admin' | 'student' }
+    const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
     if (typedProfile.role !== 'student') {
       return { success: false, error: 'Only students can mark their own attendance' }
     }

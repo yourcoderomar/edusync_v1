@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { logError, getErrorMessage, ForbiddenError, type ActionResult } from '@/lib/utils/errors'
 import type { Database } from '@/types/database'
 
@@ -22,9 +22,9 @@ type SessionWithRelations = Database['public']['Tables']['class_sessions']['Row'
  */
 export async function getSessionsByClass(classId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view class sessions')
+    const canViewSessions = await isAdminOrInstructor()
+    if (!canViewSessions) {
+      throw new ForbiddenError('Only admins or instructors can view class sessions')
     }
 
     const supabase = await createClient()
@@ -57,9 +57,9 @@ export async function getSessionsByClass(classId: string) {
  */
 export async function getSessionById(sessionId: string): Promise<ActionResult<SessionWithRelations>> {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view session details')
+    const canViewSession = await isAdminOrInstructor()
+    if (!canViewSession) {
+      throw new ForbiddenError('Only admins or instructors can view session details')
     }
 
     const supabase = await createClient()

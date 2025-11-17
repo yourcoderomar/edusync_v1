@@ -11,6 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader } from '@/components/common/Loader'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 /**
  * Class creation form
@@ -18,24 +25,54 @@ import { Loader } from '@/components/common/Loader'
  * @semantic Uses semantic HTML form elements
  * @security Client-side validation + server action
  */
-export function ClassForm() {
+type InstructorOption = {
+  id: string
+  full_name: string | null
+  email?: string | null
+}
+
+interface ClassFormProps {
+  instructors: InstructorOption[]
+  currentUserRole: 'admin' | 'student' | 'instructor'
+  currentUserId: string
+}
+
+export function ClassForm({
+  instructors,
+  currentUserRole,
+  currentUserId,
+}: ClassFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isAdmin = currentUserRole === 'admin'
+  const defaultTeacherId = isAdmin ? undefined : currentUserId
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<CreateClassInput>({
     resolver: zodResolver(createClassSchema),
+    defaultValues: {
+      teacherId: defaultTeacherId,
+    },
   })
+
+  const selectedTeacherId = watch('teacherId') ?? ''
 
   const onSubmit = async (data: CreateClassInput) => {
     setIsLoading(true)
     setError(null)
 
-    const result = await createClass(data)
+    const payload: CreateClassInput = {
+      ...data,
+      teacherId: data.teacherId ?? null,
+    }
+
+    const result = await createClass(payload)
 
     if (!result.success) {
       setError(result.error || 'An error occurred')
@@ -56,6 +93,46 @@ export function ClassForm() {
           aria-live="polite"
         >
           {error}
+        </div>
+      )}
+
+      <input type="hidden" value={selectedTeacherId} {...register('teacherId')} />
+
+      {isAdmin ? (
+        <div className="space-y-2">
+          <Label htmlFor="teacherId">
+            Instructor <span className="text-red-600" aria-label="required">*</span>
+          </Label>
+          <Select
+            value={selectedTeacherId}
+            onValueChange={(value) => setValue('teacherId', value, { shouldValidate: true })}
+          >
+            <SelectTrigger id="teacherId">
+              <SelectValue placeholder="Select an instructor" />
+            </SelectTrigger>
+            <SelectContent>
+              {instructors.length === 0 ? (
+                <SelectItem value="" disabled>
+                  No instructors available
+                </SelectItem>
+              ) : (
+                instructors.map((instructor) => (
+                  <SelectItem key={instructor.id} value={instructor.id}>
+                    {instructor.full_name || 'Unnamed Instructor'}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          {errors.teacherId && (
+            <p className="text-sm text-red-600" role="alert">
+              {errors.teacherId.message}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-600">
+          You will be assigned as the instructor for this class.
         </div>
       )}
 

@@ -40,8 +40,16 @@ export async function submitQuiz(input: unknown) {
       }
     }
 
+    type QuizAttemptRecord = {
+      id: string
+      quiz_id: string
+      student_id: string
+      submitted_at: string | null
+    }
+    const attemptRecord = attempt as QuizAttemptRecord
+
     // Can't submit twice
-    if (attempt.submitted_at) {
+    if (attemptRecord?.submitted_at) {
       return {
         success: false,
         error: 'Quiz has already been submitted.',
@@ -52,7 +60,7 @@ export async function submitQuiz(input: unknown) {
     const { data: quiz, error: quizError } = await supabase
       .from('quizzes')
       .select('id, session_id')
-      .eq('id', attempt.quiz_id)
+      .eq('id', attemptRecord.quiz_id)
       .single()
 
     if (quizError || !quiz) {
@@ -61,6 +69,8 @@ export async function submitQuiz(input: unknown) {
         error: 'Quiz not found.',
       }
     }
+    type QuizRecord = { id: string; session_id: string | null }
+    const quizRecord = quiz as QuizRecord
 
     // Get all answers for this attempt
     const { data: answers, error: answersError } = await supabase
@@ -74,12 +84,13 @@ export async function submitQuiz(input: unknown) {
     const { data: questions, error: questionsError } = await supabase
       .from('quiz_questions')
       .select('id')
-      .eq('quiz_id', attempt.quiz_id)
+      .eq('quiz_id', attemptRecord?.quiz_id)
 
     if (questionsError) throw questionsError
 
+    const answersList = (answers || []) as Array<{ is_correct: boolean | null }>
     const totalQuestions = questions?.length || 0
-    const correctAnswers = answers?.filter(a => a.is_correct === true).length || 0
+    const correctAnswers = answersList.filter(a => a.is_correct === true).length || 0
 
     // Calculate score as percentage
     const score = totalQuestions > 0 
@@ -102,22 +113,24 @@ export async function submitQuiz(input: unknown) {
     const { data: latestAttempt } = await supabase
       .from('quiz_attempts')
       .select('score, submitted_at')
-      .eq('quiz_id', attempt.quiz_id)
+      .eq('quiz_id', attemptRecord.quiz_id)
       .eq('student_id', user.id)
       .not('submitted_at', 'is', null)
       .order('submitted_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const latestScore = latestAttempt?.score || score
+    type LatestAttemptRecord = { score: number | null }
+    const latestAttemptRecord = latestAttempt as LatestAttemptRecord | null
+    const latestScore = latestAttemptRecord?.score ?? score
 
     // Update attendance with quiz grade if session exists
-    if (quiz.session_id) {
+    if (quizRecord.session_id) {
       // Get the session to find class_id
       const { data: session } = await supabase
         .from('class_sessions')
         .select('id, class_id')
-        .eq('id', quiz.session_id)
+        .eq('id', quizRecord.session_id)
         .single()
 
       if (session) {
@@ -127,7 +140,7 @@ export async function submitQuiz(input: unknown) {
         const { data: existingAttendance, error: checkError } = await supabase
           .from('attendance')
           .select('session_id, student_id')
-          .eq('session_id', quiz.session_id)
+          .eq('session_id', quizRecord.session_id)
           .eq('student_id', user.id)
           .maybeSingle()
 
@@ -136,7 +149,7 @@ export async function submitQuiz(input: unknown) {
           const { error: updateError } = await supabase
             .from('attendance')
             .update({ quiz_grade: latestScore } as never)
-            .eq('session_id', quiz.session_id)
+            .eq('session_id', quizRecord.session_id)
             .eq('student_id', user.id)
 
           if (updateError) {
@@ -148,7 +161,7 @@ export async function submitQuiz(input: unknown) {
           const { error: insertError } = await supabase
             .from('attendance')
             .insert({
-              session_id: quiz.session_id,
+              session_id: quizRecord.session_id,
               student_id: user.id,
               status: 'present',
               marked_at: new Date().toISOString(),

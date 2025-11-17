@@ -3,6 +3,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
 
+type UserRole = 'admin' | 'student' | 'instructor'
+
 /**
  * Creates a Supabase client for server-side operations
  * This client is used in Server Components, Server Actions, and Route Handlers
@@ -115,10 +117,25 @@ export async function getUserProfile() {
  * 
  * @security Always use this for admin route protection
  */
-export async function isAdmin() {
+async function getCurrentUserRole(): Promise<UserRole | null> {
   const profile = await getUserProfile()
-  const typedProfile = profile as { role: 'admin' | 'student' } | null
-  return typedProfile?.role === 'admin'
+  const typedProfile = profile as { role: UserRole } | null
+  return typedProfile?.role ?? null
+}
+
+export async function isAdmin() {
+  const role = await getCurrentUserRole()
+  return role === 'admin'
+}
+
+export async function isInstructor() {
+  const role = await getCurrentUserRole()
+  return role === 'instructor'
+}
+
+export async function isAdminOrInstructor() {
+  const role = await getCurrentUserRole()
+  return role === 'admin' || role === 'instructor'
 }
 
 /**
@@ -127,8 +144,7 @@ export async function isAdmin() {
  * @security Always use this for student route protection
  */
 export async function isStudent() {
-  const profile = await getUserProfile()
-  const typedProfile = profile as { role: 'admin' | 'student' } | null
-  return typedProfile?.role === 'student'
+  const role = await getCurrentUserRole()
+  return role === 'student'
 }
 

@@ -31,28 +31,34 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          email: string
+          email: string | null
           full_name: string | null
-          role: 'admin' | 'student'
-          picture_url: string | null
+          phone: string | null
+          parent_phone_number: string | null
+          role: 'admin' | 'student' | 'instructor'
+          profile_picture_url: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
-          email: string
+          email?: string | null
           full_name?: string | null
-          role: 'admin' | 'student'
-          picture_url?: string | null
+          phone?: string | null
+          parent_phone_number?: string | null
+          role?: 'admin' | 'student' | 'instructor'
+          profile_picture_url?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          email?: string
+          email?: string | null
           full_name?: string | null
-          role?: 'admin' | 'student'
-          picture_url?: string | null
+          phone?: string | null
+          parent_phone_number?: string | null
+          role?: 'admin' | 'student' | 'instructor'
+          profile_picture_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -87,44 +93,59 @@ export interface Database {
         Row: {
           id: string
           class_id: string
-          student_id: string
+          user_id: string
           enrolled_at: string
-        }
-        Insert: {
-          id?: string
-          class_id: string
-          student_id: string
-          enrolled_at?: string
-        }
-        Update: {
-          id?: string
-          class_id?: string
-          student_id?: string
-          enrolled_at?: string
-        }
-      }
-      enrollment_requests: {
-        Row: {
-          id: string
-          class_id: string
-          student_id: string
-          status: 'pending' | 'approved' | 'rejected'
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           class_id: string
-          student_id: string
-          status?: 'pending' | 'approved' | 'rejected'
+          user_id: string
+          enrolled_at?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           class_id?: string
-          student_id?: string
+          user_id?: string
+          enrolled_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      enrollment_requests: {
+        Row: {
+          id: string
+          class_id: string
+          user_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          notes: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          user_id: string
           status?: 'pending' | 'approved' | 'rejected'
+          notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          user_id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -136,6 +157,9 @@ export interface Database {
           title: string
           description: string | null
           session_date: string
+          starts_at: string | null
+          ends_at: string | null
+          created_by: string | null
           created_at: string
           updated_at: string
         }
@@ -145,6 +169,9 @@ export interface Database {
           title: string
           description?: string | null
           session_date: string
+          starts_at?: string | null
+          ends_at?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -154,6 +181,9 @@ export interface Database {
           title?: string
           description?: string | null
           session_date?: string
+          starts_at?: string | null
+          ends_at?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -165,6 +195,9 @@ export interface Database {
           student_id: string
           status: 'present' | 'absent' | 'late'
           marked_at: string
+          marked_by: string | null
+          notes: string | null
+          quiz_grade: number | null
         }
         Insert: {
           id?: string
@@ -172,6 +205,9 @@ export interface Database {
           student_id: string
           status: 'present' | 'absent' | 'late'
           marked_at?: string
+          marked_by?: string | null
+          notes?: string | null
+          quiz_grade?: number | null
         }
         Update: {
           id?: string
@@ -179,6 +215,9 @@ export interface Database {
           student_id?: string
           status?: 'present' | 'absent' | 'late'
           marked_at?: string
+          marked_by?: string | null
+          notes?: string | null
+          quiz_grade?: number | null
         }
       }
       quizzes: {
@@ -273,7 +312,6 @@ export interface Database {
           score: number | null
           started_at: string
           submitted_at: string | null
-          status: 'in_progress' | 'submitted' | 'graded'
         }
         Insert: {
           id?: string
@@ -282,7 +320,6 @@ export interface Database {
           score?: number | null
           started_at?: string
           submitted_at?: string | null
-          status?: 'in_progress' | 'submitted' | 'graded'
         }
         Update: {
           id?: string
@@ -291,7 +328,6 @@ export interface Database {
           score?: number | null
           started_at?: string
           submitted_at?: string | null
-          status?: 'in_progress' | 'submitted' | 'graded'
         }
       }
       quiz_answers: {
@@ -302,6 +338,7 @@ export interface Database {
           selected_option_id: string | null
           answer_text: string | null
           is_correct: boolean | null
+          created_at: string
         }
         Insert: {
           id?: string
@@ -310,6 +347,7 @@ export interface Database {
           selected_option_id?: string | null
           answer_text?: string | null
           is_correct?: boolean | null
+          created_at?: string
         }
         Update: {
           id?: string
@@ -318,6 +356,7 @@ export interface Database {
           selected_option_id?: string | null
           answer_text?: string | null
           is_correct?: boolean | null
+          created_at?: string
         }
       }
       quiz_retake_requests: {
@@ -357,7 +396,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      user_role: 'admin' | 'student'
+      user_role: 'admin' | 'student' | 'instructor'
       enrollment_request_status: 'pending' | 'approved' | 'rejected'
       attendance_status: 'present' | 'absent' | 'late'
       question_type: 'multiple_choice' | 'true_false' | 'short_answer'

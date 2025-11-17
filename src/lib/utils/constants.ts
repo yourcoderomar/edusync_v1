@@ -8,6 +8,7 @@ export const APP_DESCRIPTION = 'Educational management platform with role-based 
 export const ROLES = {
   ADMIN: 'admin',
   STUDENT: 'student',
+  INSTRUCTOR: 'instructor',
 } as const
 
 export const ATTENDANCE_STATUS = {

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, getUser, isAdmin } from '@/lib/supabase/server'
+import { createClient, getUser, isAdminOrInstructor } from '@/lib/supabase/server'
 import { handleServerError } from '@/lib/utils/errors'
 
 /**
@@ -80,10 +80,10 @@ export async function approveEnrollmentRequest(requestId: string) {
   try {
     const supabase = await createClient()
     const user = await getUser()
-    const userIsAdmin = await isAdmin()
+    const canManageRequests = await isAdminOrInstructor()
 
-    if (!user || !userIsAdmin) {
-      return { success: false, error: 'Unauthorized. Admin access required.' }
+    if (!user || !canManageRequests) {
+      return { success: false, error: 'Unauthorized. Admin or instructor access required.' }
     }
 
     // Get request details
@@ -143,10 +143,10 @@ export async function rejectEnrollmentRequest(requestId: string, reason?: string
   try {
     const supabase = await createClient()
     const user = await getUser()
-    const userIsAdmin = await isAdmin()
+    const canManageRequests = await isAdminOrInstructor()
 
-    if (!user || !userIsAdmin) {
-      return { success: false, error: 'Unauthorized. Admin access required.' }
+    if (!user || !canManageRequests) {
+      return { success: false, error: 'Unauthorized. Admin or instructor access required.' }
     }
 
     // Get request details

@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, isAdmin } from '@/lib/supabase/server'
+import { createClient, getUserProfile, isAdmin } from '@/lib/supabase/server'
 import { logError, getErrorMessage, ForbiddenError } from '@/lib/utils/errors'
 
 /**
@@ -205,12 +205,37 @@ export async function getStudentsWithEnrollments() {
  */
 export async function getStudentsByClass(classId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view class students')
+    const supabase = await createClient()
+
+    const profile = await getUserProfile()
+    if (!profile) {
+      throw new ForbiddenError('Not authenticated')
     }
 
-    const supabase = await createClient()
+    const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+
+    if (typedProfile.role === 'student') {
+      throw new ForbiddenError('Only admins or instructors can view class students')
+    }
+
+    if (typedProfile.role === 'instructor') {
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('teacher_id')
+        .eq('id', classId)
+        .single()
+
+      if (classError || !classData) {
+        logError(classError, 'getStudentsByClass - class fetch')
+        return { success: false, error: 'Class not found' }
+      }
+
+      const classInfo = classData as { teacher_id: string | null }
+
+      if (classInfo.teacher_id !== typedProfile.id) {
+        throw new ForbiddenError('You can only view students in your classes')
+      }
+    }
 
     // Get enrollments for this class
     const { data: enrollments, error } = await supabase

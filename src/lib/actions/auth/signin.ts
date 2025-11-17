@@ -70,7 +70,7 @@ export async function signIn(input: SignInInput) {
     revalidatePath('/', 'layout')
     
     // Type assertion: profile exists after null check
-    const typedProfile = profile as { role: 'admin' | 'student'; profile_picture_url: string | null }
+    const typedProfile = profile as { role: 'admin' | 'student' | 'instructor'; profile_picture_url: string | null }
     
     // Check if profile picture is missing - redirect to setup
     if (!typedProfile.profile_picture_url) {
@@ -87,8 +87,8 @@ export async function signIn(input: SignInInput) {
     }
     
     // Default redirect based on role
-    const redirectPath = typedProfile.role === 'admin' 
-      ? '/admin/dashboard' 
+    const redirectPath = typedProfile.role === 'admin' || typedProfile.role === 'instructor'
+      ? '/admin/dashboard'
       : '/student/dashboard'
     
     redirect(redirectPath)
