@@ -23,7 +23,9 @@ export async function signUp(formData: FormData) {
       password: formData.get('password') as string,
       confirmPassword: formData.get('password') as string, // For validation
       fullName: formData.get('fullName') as string,
+      phoneCountryCode: formData.get('phoneCountryCode') as string,
       phone: formData.get('phone') as string,
+      parentPhoneCountryCode: formData.get('parentPhoneCountryCode') as string,
       parentPhone: formData.get('parentPhone') as string,
     }
 

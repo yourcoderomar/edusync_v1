@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -60,7 +60,7 @@ export function StudentSearchFilter({ students, classes, onFilteredStudentsChang
   }, [students, searchQuery, selectedClassId])
 
   // Notify parent of filtered results
-  useMemo(() => {
+  useEffect(() => {
     onFilteredStudentsChange(filteredStudents)
   }, [filteredStudents, onFilteredStudentsChange])
 
@@ -143,5 +143,7 @@ export function StudentSearchFilter({ students, classes, onFilteredStudentsChang
     </div>
   )
 }
+
+
 
 

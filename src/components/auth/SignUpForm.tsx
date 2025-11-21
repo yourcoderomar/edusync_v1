@@ -59,8 +59,10 @@ export function SignUpForm() {
     const formData = new FormData()
     formData.append('email', data.email)
     formData.append('password', data.password)
+    formData.append('phoneCountryCode', data.phoneCountryCode)
     formData.append('fullName', data.fullName)
     formData.append('phone', phoneWithCode)
+    formData.append('parentPhoneCountryCode', data.parentPhoneCountryCode)
     formData.append('parentPhone', parentPhoneWithCode)
 
     const result = await signUp(formData)

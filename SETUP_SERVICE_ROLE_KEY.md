@@ -117,3 +117,5 @@ In this app, the service role key is ONLY used for:
 - [Row Level Security (RLS) Docs](https://supabase.com/docs/guides/auth/row-level-security)
 
 
+
+
