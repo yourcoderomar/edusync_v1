@@ -15,15 +15,14 @@ import { Label } from '@/components/ui/label'
 import { Loader } from '@/components/common/Loader'
 import Link from 'next/link'
 
-type ResetStatus = 'checking' | 'ready' | 'error'
+type SessionStatus = 'initializing' | 'ready' | 'error'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const [status, setStatus] = useState<ResetStatus>('checking')
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>('initializing')
 
   const {
     register,
@@ -34,27 +33,59 @@ export default function ResetPasswordPage() {
     resolver: zodResolver(resetPasswordSchema),
   })
 
+  // Initialize Supabase auth session from recovery link tokens in the URL hash
   useEffect(() => {
     let isMounted = true
 
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession()
+    const initSessionFromHash = async () => {
+      try {
+        const hash = window.location.hash.startsWith('#')
+          ? window.location.hash.slice(1)
+          : window.location.hash
 
-      if (!isMounted) return
+        const params = new URLSearchParams(hash)
+        const access_token = params.get('access_token')
+        const refresh_token = params.get('refresh_token')
+        const type = params.get('type')
 
-      if (error || !data.session) {
-        setStatus('error')
-        setStatusMessage(
-          'This recovery link is invalid or has expired. Please request a new password reset email.'
+        if (type !== 'recovery' || !access_token || !refresh_token) {
+          if (!isMounted) return
+          setSessionStatus('error')
+          setServerError(
+            'This recovery link is invalid or has expired. Please request a new password reset email.'
+          )
+          return
+        }
+
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        })
+
+        if (!isMounted) return
+
+        if (error) {
+          console.error('Supabase setSession error (recovery)', error)
+          setSessionStatus('error')
+          setServerError(
+            'Could not validate this recovery link. Please request a new password reset email.'
+          )
+          return
+        }
+
+        setSessionStatus('ready')
+        setServerError(null)
+      } catch (err) {
+        console.error('Unexpected error initializing recovery session', err)
+        if (!isMounted) return
+        setSessionStatus('error')
+        setServerError(
+          'Something went wrong validating this recovery link. Please request a new password reset email.'
         )
-        return
       }
-
-      setStatus('ready')
-      setStatusMessage(null)
     }
 
-    void checkSession()
+    void initSessionFromHash()
 
     return () => {
       isMounted = false
@@ -62,7 +93,11 @@ export default function ResetPasswordPage() {
   }, [supabase])
 
   const onSubmit = async (values: ResetPasswordInput) => {
-    if (status !== 'ready') {
+    // Don't allow submission until we've confirmed a valid recovery session
+    if (sessionStatus !== 'ready') {
+      setServerError(
+        'This recovery link is not active. Please request a new password reset email and try again.'
+      )
       return
     }
 
@@ -74,8 +109,11 @@ export default function ResetPasswordPage() {
     })
 
     if (error) {
+      // Surface the actual Supabase error message to help debugging
+      console.error('Supabase updateUser error', error)
       setServerError(
-        'Unable to update your password right now. Please try again or request a new recovery email.'
+        error.message ||
+          'Unable to update your password right now. Please try again or request a new recovery email.'
       )
       setIsSubmitting(false)
       return
@@ -95,19 +133,6 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        {status === 'checking' && (
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-            <Loader size="sm" inline />
-            <span>Confirming recovery link…</span>
-          </div>
-        )}
-
-        {status === 'error' && statusMessage && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-800" role="alert">
-            {statusMessage}
-          </div>
-        )}
-
         {serverError && (
           <div className="rounded-md bg-red-50 p-4 text-sm text-red-800" role="alert">
             {serverError}
@@ -118,7 +143,6 @@ export default function ResetPasswordPage() {
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-6"
           noValidate
-          aria-disabled={status !== 'ready'}
         >
           <div className="space-y-2">
             <Label htmlFor="password">New password</Label>
@@ -128,7 +152,7 @@ export default function ResetPasswordPage() {
               placeholder="Enter a strong password"
               aria-invalid={!!errors.password}
               aria-describedby={errors.password ? 'password-error' : undefined}
-              disabled={status !== 'ready' || isSubmitting}
+              disabled={isSubmitting}
               {...register('password')}
             />
             {errors.password && (
@@ -146,7 +170,7 @@ export default function ResetPasswordPage() {
               placeholder="Re-enter your password"
               aria-invalid={!!errors.confirmPassword}
               aria-describedby={errors.confirmPassword ? 'confirm-password-error' : undefined}
-              disabled={status !== 'ready' || isSubmitting}
+              disabled={isSubmitting}
               {...register('confirmPassword')}
             />
             {errors.confirmPassword && (
@@ -163,9 +187,9 @@ export default function ResetPasswordPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={status !== 'ready' || isSubmitting}
+            disabled={isSubmitting || sessionStatus !== 'ready'}
             aria-label={
-              status !== 'ready'
+              sessionStatus !== 'ready'
                 ? 'Password reset unavailable'
                 : isSubmitting
                   ? 'Updating password'

@@ -35,7 +35,8 @@ export async function middleware(request: NextRequest) {
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   // Public routes that don't require authentication (excluding attendance/scan which is handled above)
-  const publicRoutes = ['/signin', '/signup']
+  // Include reset-password so recovery links can be opened without being redirected to /signin
+  const publicRoutes = ['/signin', '/signup', '/reset-password']
   const isPublicRoute = publicRoutes.includes(normalizedPathname)
   
   // If user is not authenticated
