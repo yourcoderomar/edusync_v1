@@ -3,10 +3,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getStudentById } from '@/lib/actions/students/get-students'
+import { getClasses } from '@/lib/actions/classes/get-classes'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils/format'
+import { AdminEnrollStudentForm } from '@/components/enrollment/AdminEnrollStudentForm'
 
 /**
  * Derive quiz attempt status from data
@@ -50,13 +52,28 @@ export async function generateMetadata({ params }: StudentDetailsPageProps): Pro
 export default async function StudentDetailsPage({ params }: StudentDetailsPageProps) {
   const { studentId } = await params
   const result = await getStudentById(studentId)
+  const classesResult = await getClasses()
 
   if (!result.success) {
     notFound()
   }
 
   // Type assertion: when success is true, data exists
-  const { student, enrollments, quizAttempts } = (result as { success: true; data: { student: any; enrollments: any[]; quizAttempts: any[] } }).data
+  const { student, enrollments, quizAttempts } = (result as {
+    success: true
+    data: { student: any; enrollments: any[]; quizAttempts: any[] }
+  }).data
+
+  const allClasses =
+    classesResult && classesResult.success && classesResult.data ? classesResult.data : []
+
+  const enrolledClassIds = new Set(
+    (enrollments || []).map((enrollment: { class_id: string }) => enrollment.class_id)
+  )
+
+  const availableClasses = (allClasses as Array<{ id: string; name: string; description?: string | null }>).filter(
+    (cls) => !enrolledClassIds.has(cls.id)
+  )
 
   return (
     <>
@@ -153,6 +170,21 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
             ) : (
               <p className="text-sm text-gray-500">No quiz data available</p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Enroll in class</CardTitle>
+            <CardDescription>
+              Enroll this student into an additional class.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AdminEnrollStudentForm
+              studentId={student.id}
+              availableClasses={availableClasses}
+            />
           </CardContent>
         </Card>
       </div>

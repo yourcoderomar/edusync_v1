@@ -27,3 +27,13 @@ export type ApproveEnrollmentRequestInput = z.infer<typeof approveEnrollmentRequ
 export type RejectEnrollmentRequestInput = z.infer<typeof rejectEnrollmentRequestSchema>
 export type UnenrollInput = z.infer<typeof unenrollSchema>
 
+/**
+ * Admin enroll student in class
+ */
+export const adminEnrollStudentSchema = z.object({
+  studentId: z.string().uuid('Invalid student ID'),
+  classId: z.string().uuid('Invalid class ID'),
+})
+
+export type AdminEnrollStudentInput = z.infer<typeof adminEnrollStudentSchema>
+

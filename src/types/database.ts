@@ -115,6 +115,29 @@ export interface Database {
           updated_at?: string
         }
       }
+      instructor_enrollments: {
+        Row: {
+          id: string
+          student_id: string
+          instructor_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          instructor_id: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          instructor_id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+        }
+      }
       enrollment_requests: {
         Row: {
           id: string

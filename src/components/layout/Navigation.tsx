@@ -26,7 +26,8 @@ const adminNavItems: NavItem[] = [
 
 const studentNavItems: NavItem[] = [
   { name: 'Dashboard', href: '/student/dashboard' },
-  { name: 'My Classes', href: '/student/classes' },
+  { name: 'My Learning', href: '/student/my-learning' },
+  { name: 'Instructors', href: '/student/instructors' },
   { name: 'Enrollment Requests', href: '/student/enrollment-requests' },
   { name: 'Profile', href: '/profile' },
 ]
@@ -34,6 +35,7 @@ const studentNavItems: NavItem[] = [
 const instructorNavItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard' },
   { name: 'Classes', href: '/admin/classes' },
+  { name: 'Students', href: '/admin/students' },
   { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },
   { name: 'Profile', href: '/profile' },
 ]

@@ -50,6 +50,7 @@ export const ROUTES = {
   STUDENT_DASHBOARD: '/student/dashboard',
   STUDENT_CLASSES: '/student/classes',
   STUDENT_ENROLLMENT_REQUESTS: '/student/enrollment-requests',
+  STUDENT_INSTRUCTORS: '/student/instructors',
   
   // Shared routes
   PROFILE: '/profile',

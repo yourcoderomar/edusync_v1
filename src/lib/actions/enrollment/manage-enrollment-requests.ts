@@ -18,6 +18,62 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       return { success: false, error: 'Not authenticated' }
     }
 
+    // Get class to determine instructor
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('id, teacher_id')
+      .eq('id', classId)
+      .single()
+
+    if (classError || !classData) {
+      return { success: false, error: 'Class not found' }
+    }
+
+    if (!classData.teacher_id) {
+      return { success: false, error: 'This class has no instructor assigned yet. Please contact support.' }
+    }
+
+    // Ensure student is connected with this instructor first:
+    // either via an approved instructor_enrollment OR an existing class enrollment
+    const { data: instructorEnrollment } = await supabase
+      .from('instructor_enrollments')
+      .select('id, status')
+      .eq('student_id', user.id)
+      .eq('instructor_id', classData.teacher_id)
+      .eq('status', 'approved')
+      .maybeSingle()
+
+    if (!instructorEnrollment) {
+      // Fallback: check if student is already enrolled in ANY class with this instructor
+      const { data: instructorClasses, error: instructorClassesError } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('teacher_id', classData.teacher_id)
+
+      if (!instructorClassesError && instructorClasses && instructorClasses.length > 0) {
+        const classIds = instructorClasses.map(c => c.id as string)
+
+        const { data: existingInstructorClassEnrollment } = await supabase
+          .from('enrollments')
+          .select('id')
+          .eq('user_id', user.id)
+          .in('class_id', classIds)
+          .maybeSingle()
+
+        if (!existingInstructorClassEnrollment) {
+          return {
+            success: false,
+            error: 'You must enroll with this instructor before requesting enrollment in their class.',
+          }
+        }
+      } else {
+        return {
+          success: false,
+          error: 'You must enroll with this instructor before requesting enrollment in their class.',
+        }
+      }
+    }
+
     // Check if already enrolled
     const { data: existingEnrollment } = await supabase
       .from('enrollments')
@@ -109,6 +165,34 @@ export async function approveEnrollmentRequest(requestId: string) {
       } as never)
 
     if (enrollmentError) throw enrollmentError
+
+    // Ensure instructor_enrollments has a record linking this student and the class instructor
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('teacher_id')
+      .eq('id', typedRequest.class_id)
+      .single()
+
+    if (!classError && classData && classData.teacher_id) {
+      const teacherId = classData.teacher_id as string
+
+      const { data: existingInstructorEnrollment } = await supabase
+        .from('instructor_enrollments')
+        .select('id')
+        .eq('student_id', typedRequest.user_id)
+        .eq('instructor_id', teacherId)
+        .maybeSingle()
+
+      if (!existingInstructorEnrollment) {
+        await supabase
+          .from('instructor_enrollments')
+          .insert({
+            student_id: typedRequest.user_id,
+            instructor_id: teacherId,
+            status: 'approved',
+          } as never)
+      }
+    }
 
     // Update request status
     const { error: updateError } = await supabase

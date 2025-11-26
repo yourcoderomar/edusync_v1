@@ -67,6 +67,19 @@ export default async function StudentDashboardPage() {
     classes: ClassData | null
   }
 
+  type InstructorProfile = {
+    id: string
+    full_name: string | null
+    phone: string | null
+  }
+
+  type InstructorEnrollmentWithProfile = {
+    id: string
+    status: 'pending' | 'approved' | 'rejected'
+    created_at: string
+    instructor: InstructorProfile | null
+  }
+
   // Fetch enrollments first to get class IDs
   const { data: enrollments, error: enrollmentsError } = await supabase
     .from('enrollments')
@@ -104,6 +117,30 @@ export default async function StudentDashboardPage() {
     }))
   }
 
+  // Fetch enrolled instructors
+  const { data: instructorEnrollments, error: instructorEnrollmentsError } = await supabase
+    .from('instructor_enrollments')
+    .select(
+      `
+        id,
+        status,
+        created_at,
+        instructor:profiles!instructor_enrollments_instructor_id_fkey (
+          id,
+          full_name,
+          phone
+        )
+      `
+    )
+    .eq('student_id', user.id)
+    .eq('status', 'approved')
+
+  if (instructorEnrollmentsError) {
+    console.error('Error fetching instructor enrollments:', instructorEnrollmentsError)
+  }
+
+  const typedInstructorEnrollments = (instructorEnrollments || []) as InstructorEnrollmentWithProfile[]
+
   return (
     <>
       <header className="mb-8">
@@ -134,27 +171,60 @@ export default async function StudentDashboardPage() {
         </div>
       </section>
 
+      <section aria-labelledby="instructors-heading" className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle id="instructors-heading">My Instructors</CardTitle>
+            <CardDescription>
+              Instructors you are currently enrolled with
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {typedInstructorEnrollments.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                You are not enrolled with any instructors yet. Visit the Instructors page to get started.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {typedInstructorEnrollments.map((enrollment) => {
+                  const instructor = enrollment.instructor
+                  if (!instructor) return null
+
+                  return (
+                    <article key={enrollment.id} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+                      <h3 className="font-medium text-gray-900">
+                        {instructor.full_name || 'Unnamed Instructor'}
+                      </h3>
+                      {instructor.phone && (
+                        <p className="mt-1 text-sm text-gray-600">
+                          Phone: {instructor.phone}
+                        </p>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       <section aria-labelledby="enrolled-classes-heading">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle id="enrolled-classes-heading">My Classes</CardTitle>
+                <CardTitle id="enrolled-classes-heading">Recent Classes</CardTitle>
                 <CardDescription>
-                  Classes you are currently enrolled in
+                  A quick view of classes you are enrolled in
                 </CardDescription>
               </div>
-              {classesList.length > 0 && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/student/classes">View All</Link>
-                </Button>
-              )}
             </div>
           </CardHeader>
           <CardContent>
             {classesList.length === 0 ? (
               <p className="text-sm text-gray-500">
-                You are not enrolled in any classes yet. Browse available classes to get started!
+                You are not enrolled in any classes yet. Visit the Instructors page to get started.
               </p>
             ) : (
               <div className="space-y-4">
@@ -162,21 +232,18 @@ export default async function StudentDashboardPage() {
                   const classData = enrollment.classes as any
                   if (!classData || !classData.id) return null
                   return (
-                    <Link
+                    <article
                       key={`${enrollment.class_id}-${enrollment.user_id}`}
-                      href={`/student/classes/${classData.id}`}
-                      className="block"
+                      className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                     >
-                      <article className="border-b border-gray-200 pb-4 last:border-0 last:pb-0 hover:bg-gray-50 p-3 -m-3 rounded-lg transition-colors">
-                        <h3 className="font-medium text-gray-900">{classData.name}</h3>
-                        {classData.description && (
-                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">{classData.description}</p>
-                        )}
-                        <time className="mt-1 block text-xs text-gray-500" dateTime={enrollment.enrolled_at}>
-                          Enrolled {formatDate(enrollment.enrolled_at)}
-                        </time>
-                      </article>
-                    </Link>
+                      <h3 className="font-medium text-gray-900">{classData.name}</h3>
+                      {classData.description && (
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{classData.description}</p>
+                      )}
+                      <time className="mt-1 block text-xs text-gray-500" dateTime={enrollment.enrolled_at}>
+                        Enrolled {formatDate(enrollment.enrolled_at)}
+                      </time>
+                    </article>
                   )
                 })}
               </div>

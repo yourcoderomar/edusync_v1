@@ -128,12 +128,19 @@ export async function getStudentById(studentId: string) {
  */
 export async function getStudentsWithEnrollments() {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view students')
+    const supabase = await createClient()
+
+    const profile = await getUserProfile()
+    if (!profile) {
+      throw new ForbiddenError('Not authenticated')
     }
 
-    const supabase = await createClient()
+    const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+    const userIsAdmin = typedProfile.role === 'admin'
+
+    if (typedProfile.role === 'student') {
+      throw new ForbiddenError('Only admins or instructors can view students')
+    }
 
     // Get all students
     const { data: students, error: studentsError } = await supabase

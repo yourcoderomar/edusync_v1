@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getUserProfile, getUser } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProfileForm } from '@/components/profile/ProfileForm'
+import { ProfileQRCode } from '@/components/profile/ProfileQRCode'
 
 export const metadata: Metadata = {
   title: 'Profile',
@@ -60,6 +61,10 @@ export default async function ProfilePage() {
             />
           </CardContent>
         </Card>
+
+        {(profile as any).role === 'student' && (
+          <ProfileQRCode userId={user.id} />
+        )}
       </div>
     </>
   )
