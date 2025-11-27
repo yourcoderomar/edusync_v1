@@ -29,7 +29,12 @@ export async function createInstructorEnrollment(instructorId: string) {
       return { success: false, error: 'Instructor not found' }
     }
 
-    if (instructorProfile.role !== 'instructor') {
+    const typedInstructorProfile = instructorProfile as {
+      id: string
+      role: 'admin' | 'instructor' | 'student'
+    }
+
+    if (typedInstructorProfile.role !== 'instructor') {
       return { success: false, error: 'Selected user is not an instructor' }
     }
 
@@ -41,7 +46,12 @@ export async function createInstructorEnrollment(instructorId: string) {
       .eq('instructor_id', instructorId)
       .maybeSingle()
 
-    if (existingEnrollment && existingEnrollment.status === 'approved') {
+    const typedExistingEnrollment = existingEnrollment as {
+      id: string
+      status: 'pending' | 'approved' | 'rejected'
+    } | null
+
+    if (typedExistingEnrollment && typedExistingEnrollment.status === 'approved') {
       return { success: false, error: 'You are already enrolled with this instructor' }
     }
 

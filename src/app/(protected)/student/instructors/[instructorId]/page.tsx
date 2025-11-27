@@ -51,6 +51,12 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
     notFound()
   }
 
+  const typedInstructor = instructor as {
+    id: string
+    full_name: string | null
+    phone: string | null
+  }
+
   // Check current enrollment status with this instructor (if any)
   const { data: instructorEnrollment } = await supabase
     .from('instructor_enrollments')
@@ -58,6 +64,11 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
     .eq('student_id', user.id)
     .eq('instructor_id', instructorId)
     .maybeSingle()
+
+  const typedInstructorEnrollment = instructorEnrollment as {
+    id: string
+    status: 'pending' | 'approved' | 'rejected'
+  } | null
 
   // Get all classes taught by this instructor
   const { data: classes, error: classesError } = await supabase
@@ -99,11 +110,11 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {instructor.full_name || 'Instructor'}
+              {typedInstructor.full_name || 'Instructor'}
             </h1>
-            {instructor.phone && (
+            {typedInstructor.phone && (
               <p className="mt-2 text-gray-600">
-                Phone: {instructor.phone}
+                Phone: {typedInstructor.phone}
               </p>
             )}
             <p className="mt-1 text-sm text-gray-500">
@@ -111,12 +122,12 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {instructorEnrollment?.status === 'approved' ? (
+            {typedInstructorEnrollment?.status === 'approved' ? (
               <span className="text-xs font-semibold text-green-600">
                 Enrolled with this instructor
               </span>
             ) : (
-              <EnrollWithInstructorButton instructorId={instructor.id} />
+              <EnrollWithInstructorButton instructorId={typedInstructor.id} />
             )}
             <Link
               href="/student/instructors"

@@ -29,7 +29,9 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       return { success: false, error: 'Class not found' }
     }
 
-    if (!classData.teacher_id) {
+    const typedClassData = classData as { id: string; teacher_id: string | null }
+
+    if (!typedClassData.teacher_id) {
       return { success: false, error: 'This class has no instructor assigned yet. Please contact support.' }
     }
 
@@ -39,7 +41,7 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       .from('instructor_enrollments')
       .select('id, status')
       .eq('student_id', user.id)
-      .eq('instructor_id', classData.teacher_id)
+      .eq('instructor_id', typedClassData.teacher_id)
       .eq('status', 'approved')
       .maybeSingle()
 
@@ -48,10 +50,10 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       const { data: instructorClasses, error: instructorClassesError } = await supabase
         .from('classes')
         .select('id')
-        .eq('teacher_id', classData.teacher_id)
+        .eq('teacher_id', typedClassData.teacher_id)
 
       if (!instructorClassesError && instructorClasses && instructorClasses.length > 0) {
-        const classIds = instructorClasses.map(c => c.id as string)
+        const classIds = instructorClasses.map(c => (c as { id: string }).id)
 
         const { data: existingInstructorClassEnrollment } = await supabase
           .from('enrollments')
@@ -173,8 +175,10 @@ export async function approveEnrollmentRequest(requestId: string) {
       .eq('id', typedRequest.class_id)
       .single()
 
-    if (!classError && classData && classData.teacher_id) {
-      const teacherId = classData.teacher_id as string
+    const typedClassData2 = classData as { teacher_id: string | null } | null
+
+    if (!classError && typedClassData2 && typedClassData2.teacher_id) {
+      const teacherId = typedClassData2.teacher_id
 
       const { data: existingInstructorEnrollment } = await supabase
         .from('instructor_enrollments')

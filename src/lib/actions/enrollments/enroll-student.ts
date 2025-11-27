@@ -40,7 +40,9 @@ export async function enrollStudentInClass(input: unknown) {
       }
     }
 
-    if (studentProfile.role !== 'student') {
+    const typedStudentProfile = studentProfile as { id: string; role: 'admin' | 'instructor' | 'student' }
+
+    if (typedStudentProfile.role !== 'student') {
       return {
         success: false,
         error: 'Only student accounts can be enrolled into classes',
@@ -81,8 +83,10 @@ export async function enrollStudentInClass(input: unknown) {
       .eq('id', classId)
       .single()
 
-    if (!classError && classData && classData.teacher_id) {
-      const teacherId = classData.teacher_id as string
+    const typedClassData = classData as { teacher_id: string | null } | null
+
+    if (!classError && typedClassData && typedClassData.teacher_id) {
+      const teacherId = typedClassData.teacher_id
 
       const { data: existingInstructorEnrollment } = await supabase
         .from('instructor_enrollments')
