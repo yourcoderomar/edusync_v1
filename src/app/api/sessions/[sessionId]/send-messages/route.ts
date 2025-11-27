@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, isAdminOrInstructor } from '@/lib/supabase/server'
 import { getAttendanceBySession } from '@/lib/actions/attendance/get-attendance'
@@ -13,16 +14,22 @@ import { formatDate } from '@/lib/utils/format'
  * - Only admins or instructors can send messages
  * - Uses authenticated client (respects RLS policies)
  */
+export const dynamic = 'force-dynamic'
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
+    const debugId = randomUUID()
     const { sessionId } = await params
+
+    console.log('[send-messages] request start', { debugId, sessionId })
     
     // Check if user is admin
     const canSendMessages = await isAdminOrInstructor()
     if (!canSendMessages) {
+      console.warn('[send-messages] unauthorized attempt', { debugId, sessionId })
       return NextResponse.json(
         { success: false, error: 'Only admins or instructors can send messages' },
         { status: 403 }
@@ -31,18 +38,20 @@ export async function POST(
 
     // Get n8n webhook URL from environment variable
     const webhookUrl = process.env.N8N_WEBHOOK_URL
+    console.log('[send-messages] webhook url resolved', { debugId, hasUrl: !!webhookUrl })
     if (!webhookUrl) {
       return NextResponse.json(
-        { success: false, error: 'N8N webhook URL is not configured' },
+        { success: false, error: 'N8N webhook URL is not configured', debugId },
         { status: 500 }
       )
     }
 
     // Fetch session data
     const sessionResult = await getSessionById(sessionId)
+    console.log('[send-messages] session lookup result', { debugId, success: sessionResult.success })
     if (!sessionResult.success || !sessionResult.data) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: 'Session not found', debugId },
         { status: 404 }
       )
     }
@@ -52,9 +61,10 @@ export async function POST(
 
     // Fetch attendance data
     const attendanceResult = await getAttendanceBySession(sessionId)
+    console.log('[send-messages] attendance result', { debugId, success: attendanceResult.success })
     if (!attendanceResult.success) {
       return NextResponse.json(
-        { success: false, error: attendanceResult.error || 'Failed to fetch attendance' },
+        { success: false, error: attendanceResult.error || 'Failed to fetch attendance', debugId },
         { status: 500 }
       )
     }
@@ -64,6 +74,7 @@ export async function POST(
     // Fetch quizzes for the session
     const quizzesResult = await getQuizzesBySession(sessionId)
     const quizzes = quizzesResult.success ? quizzesResult.data || [] : []
+    console.log('[send-messages] quiz result', { debugId, quizCount: quizzes.length, quizSuccess: quizzesResult.success })
 
     // Prepare table data for each student with parent phone
     // Send as individual variables so n8n can format the message
@@ -94,8 +105,9 @@ export async function POST(
       })
 
     if (tableData.length === 0) {
+      console.warn('[send-messages] no parent phone numbers', { debugId })
       return NextResponse.json(
-        { success: false, error: 'No students with parent phone numbers found' },
+        { success: false, error: 'No students with parent phone numbers found', debugId },
         { status: 400 }
       )
     }
@@ -103,6 +115,7 @@ export async function POST(
     // Send table data to n8n webhook as a single request
     // n8n can then split this table using "Split Out Items" node
     try {
+      console.log('[send-messages] sending payload to webhook', { debugId, total: tableData.length })
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -118,26 +131,29 @@ export async function POST(
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const webhookText = await response.text().catch(() => 'Unable to read body')
+        throw new Error(`HTTP error! status: ${response.status}; body: ${webhookText}`)
       }
 
       return NextResponse.json({
         success: true,
         message: `Message sent to ${tableData.length} parents`,
         total: tableData.length,
+        debugId,
       })
     } catch (error) {
-      console.error('Failed to send data to n8n webhook:', error)
+      console.error('[send-messages] webhook error', { debugId, error })
       return NextResponse.json(
         { 
           success: false, 
-          error: error instanceof Error ? error.message : 'Failed to send data to webhook' 
+          error: error instanceof Error ? error.message : 'Failed to send data to webhook',
+          debugId,
         },
         { status: 500 }
       )
     }
   } catch (error) {
-    console.error('Error sending messages:', error)
+    console.error('[send-messages] unhandled error', error)
     return NextResponse.json(
       { success: false, error: 'Failed to send messages' },
       { status: 500 }
