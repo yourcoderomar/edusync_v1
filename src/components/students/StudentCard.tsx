@@ -21,7 +21,7 @@ interface StudentCardProps {
 export function StudentCard({ student }: StudentCardProps) {
   return (
     <Link href={`/admin/students/${student.id}`}>
-      <Card className="h-full transition-shadow hover:shadow-md">
+      <Card className="h-full transition-all hover:shadow-lg hover:border-teal-200 group">
         <CardHeader>
           <div className="flex items-center gap-3">
             {student.profile_picture_url ? (
@@ -34,14 +34,14 @@ export function StudentCard({ student }: StudentCardProps) {
                 />
               </div>
             ) : (
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 font-semibold text-lg">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center">
+                <span className="text-white font-semibold text-lg">
                   {(student.full_name || 'S').charAt(0).toUpperCase()}
                 </span>
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base truncate">
+              <CardTitle className="text-base truncate group-hover:text-teal-600 transition-colors">
                 {student.full_name || 'Unnamed Student'}
               </CardTitle>
               {student.phone && (

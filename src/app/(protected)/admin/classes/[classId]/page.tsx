@@ -2,9 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getClassById } from '@/lib/actions/classes/get-classes'
+import { getUserProfile } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
+import { DeleteClassButton } from '@/components/classes/DeleteClassButton'
 
 interface ClassDetailsPageProps {
   params: Promise<{ classId: string }>
@@ -45,6 +47,10 @@ export default async function ClassDetailsPage({ params }: ClassDetailsPageProps
 
   const classData = result.data
   const creator = classData.creator as any
+  const profile = await getUserProfile()
+  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' } | null
+  const isAdmin = typedProfile?.role === 'admin'
+  const canDelete = isAdmin || (typedProfile?.role === 'instructor' && classData.teacher_id === typedProfile?.id)
 
   return (
     <>
@@ -66,9 +72,14 @@ export default async function ClassDetailsPage({ params }: ClassDetailsPageProps
               </div>
             </div>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin/classes">Back to classes</Link>
-          </Button>
+          <div className="flex gap-2">
+            {canDelete && (
+              <DeleteClassButton classId={classId} />
+            )}
+            <Button asChild variant="outline">
+              <Link href="/admin/classes">Back to classes</Link>
+            </Button>
+          </div>
         </div>
       </header>
 

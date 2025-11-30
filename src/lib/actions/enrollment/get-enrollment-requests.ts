@@ -25,6 +25,7 @@ export async function getAllEnrollmentRequests() {
         class:classes!enrollment_requests_class_id_fkey(id, name, description),
         reviewer:profiles!enrollment_requests_reviewed_by_fkey(id, full_name)
       `)
+      .eq('status', 'pending')
       .order('created_at', { ascending: false })
 
     if (error && isRealError(error)) {

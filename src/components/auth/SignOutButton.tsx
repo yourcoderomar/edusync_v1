@@ -80,7 +80,7 @@ export function SignOutButton({
         </>
       ) : (
         <>
-          {showIcon && <LogOut className="h-4 w-4" />}
+          {showIcon && <LogOut className="h-4 w-4 mr-2" />}
           {children || <span>Sign out</span>}
         </>
       )}

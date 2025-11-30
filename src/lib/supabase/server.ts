@@ -53,10 +53,12 @@ export async function createClient() {
  */
 export function createAdminClient() {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured. Add it to .env.local and restart the server.')
   }
 
-  return createSupabaseClient<Database>(
+  // Create client with service role key
+  // The service role key should automatically bypass RLS
+  const client = createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
@@ -66,6 +68,8 @@ export function createAdminClient() {
       },
     }
   )
+
+  return client
 }
 
 /**

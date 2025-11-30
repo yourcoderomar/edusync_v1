@@ -42,19 +42,21 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
   const channelRef = useRef<any>(null)
   
   const [attendanceData, setAttendanceData] = useState<Record<string, {
-    status: 'present' | 'absent' | ''
+    status: 'present' | 'absent'
     notes: string
     quizGrade: string
   }>>(
     students.reduce((acc, student) => {
       // Map existing statuses to attended/absent
+      // Default to 'absent' if no existing status
       const currentStatus = student.currentStatus
-      let mappedStatus: 'present' | 'absent' | '' = ''
+      let mappedStatus: 'present' | 'absent' = 'absent'
       if (currentStatus === 'present' || currentStatus === 'late' || currentStatus === 'excused') {
         mappedStatus = 'present'
       } else if (currentStatus === 'absent') {
         mappedStatus = 'absent'
       }
+      // If no status exists, default to 'absent'
       
       acc[student.id] = {
         status: mappedStatus,
@@ -62,7 +64,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
         quizGrade: student.currentQuizGrade?.toString() || '',
       }
       return acc
-    }, {} as Record<string, { status: 'present' | 'absent' | ''; notes: string; quizGrade: string }>)
+    }, {} as Record<string, { status: 'present' | 'absent'; notes: string; quizGrade: string }>)
   )
 
   // Set up real-time subscription for attendance updates
@@ -96,7 +98,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
             // Only update if this student is in our list
             if (students.some(s => s.id === studentId)) {
               // Map status to our format
-              let mappedStatus: 'present' | 'absent' | '' = ''
+              let mappedStatus: 'present' | 'absent' = 'absent'
               if (newRecord.status === 'present' || newRecord.status === 'late' || newRecord.status === 'excused') {
                 mappedStatus = 'present'
               } else if (newRecord.status === 'absent') {
@@ -136,7 +138,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
               setAttendanceData(prev => ({
                 ...prev,
                 [studentId]: {
-                  status: '',
+                  status: 'absent',
                   notes: '',
                   quizGrade: '',
                 },
@@ -201,9 +203,8 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     setError(null)
 
     try {
-      // Filter only students with a status selected
+      // All students have a status (default is 'absent'), so no need to filter
       const attendance = Object.entries(attendanceData)
-        .filter(([_, data]) => data.status)
         .map(([studentId, data]) => {
           console.log('Processing student:', studentId, 'Type:', typeof studentId)
           
@@ -223,11 +224,8 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
           }
         })
 
-      if (attendance.length === 0) {
-        setError('Please mark attendance for at least one student')
-        setIsSubmitting(false)
-        return
-      }
+      // All students have a status (default is 'absent'), so attendance will always have entries
+      // No need to check for empty attendance array
 
       console.log('📤 Submitting attendance:', { sessionId, attendance })
 
@@ -307,7 +305,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStudents.map((student) => {
-          const status = attendanceData[student.id]?.status || ''
+          const status = attendanceData[student.id]?.status || 'absent'
           const isAttended = status === 'present'
           const wasRecentlyUpdated = recentlyUpdated.has(student.id)
 

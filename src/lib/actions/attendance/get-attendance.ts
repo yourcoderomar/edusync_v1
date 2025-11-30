@@ -80,6 +80,41 @@ export async function getAttendanceStats(sessionId: string) {
 }
 
 /**
+ * Get student's own attendance for a specific session
+ * 
+ * @security Students can only view their own attendance
+ */
+export async function getStudentAttendance(sessionId: string) {
+  try {
+    const { createClient, getUser } = await import('@/lib/supabase/server')
+    const user = await getUser()
+    
+    if (!user) {
+      return { success: false, error: 'You must be logged in' }
+    }
+
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('session_id, student_id, status, marked_at')
+      .eq('session_id', sessionId)
+      .eq('student_id', user.id)
+      .maybeSingle()
+
+    if (error) {
+      logError(error, 'getStudentAttendance')
+      return { success: false, error: 'Failed to fetch attendance' }
+    }
+
+    return { success: true, data: data || null }
+  } catch (error) {
+    logError(error, 'getStudentAttendance')
+    return { success: false, error: getErrorMessage(error) }
+  }
+}
+
+/**
  * Get attendance records for a class (all sessions)
  * 
  * @security Only accessible by authenticated admins

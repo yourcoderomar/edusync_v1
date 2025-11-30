@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader } from '@/components/common/Loader'
 import { Edit2, Upload } from 'lucide-react'
+import { ProfileQRCode } from './ProfileQRCode'
 
 interface ProfileFormProps {
   initialData: {
@@ -21,6 +22,7 @@ interface ProfileFormProps {
     role: string
     email: string | null
   }
+  userId?: string
 }
 
 /**
@@ -28,7 +30,7 @@ interface ProfileFormProps {
  * 
  * @security Client-side validation + server-side action
  */
-export function ProfileForm({ initialData }: ProfileFormProps) {
+export function ProfileForm({ initialData, userId }: ProfileFormProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -190,32 +192,63 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       )}
 
       {/* Profile Picture Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-gray-200">
-        <div className="relative">
-          {previewUrl ? (
-            <div className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-gray-200">
-              <Image
-                src={previewUrl}
-                alt={`${currentData.full_name || 'User'}'s profile picture`}
-                fill
-                className="object-cover"
-              />
-            </div>
-          ) : (
-            <div className="h-32 w-32 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg ring-2 ring-gray-200">
-              <span className="text-white font-bold text-4xl">
-                {(currentData.full_name || 'U').charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">
-            {currentData.full_name || 'No name set'}
-          </h2>
-          <p className="text-sm font-medium text-gray-500 capitalize mb-4">{currentData.role}</p>
-          {isEditing && (
-            <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col lg:flex-row items-center lg:items-start lg:justify-between gap-4 pb-6 border-b border-gray-200">
+        {/* QR Code Section - Mobile: Top when profile is centered */}
+        {userId && initialData.role === 'student' && (
+          <div className="flex justify-center lg:hidden w-full mb-4">
+            <ProfileQRCode userId={userId} />
+          </div>
+        )}
+        <div className="flex flex-col items-center lg:items-start gap-4 flex-shrink-0 lg:ml-4">
+          <div className="relative group">
+            {previewUrl ? (
+              <div 
+                className="relative h-36 w-36 rounded-full overflow-hidden border-4 border-white shadow-xl ring-2 ring-gray-100 cursor-pointer transition-all hover:ring-blue-400 hover:shadow-2xl"
+                onClick={() => {
+                  if (!isEditing) {
+                    setIsEditing(true)
+                  }
+                  document.getElementById('profilePicture')?.click()
+                }}
+                title="Click to change profile picture"
+              >
+                <Image
+                  src={previewUrl}
+                  alt={`${currentData.full_name || 'User'}'s profile picture`}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center pointer-events-none">
+                  <Edit2 className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="relative h-36 w-36 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center border-4 border-white shadow-xl ring-2 ring-gray-100 cursor-pointer transition-all hover:ring-blue-400 hover:shadow-2xl group"
+                onClick={() => {
+                  if (!isEditing) {
+                    setIsEditing(true)
+                  }
+                  document.getElementById('profilePicture')?.click()
+                }}
+                title="Click to upload profile picture"
+              >
+                <span className="text-white font-bold text-5xl relative z-10">
+                  {(currentData.full_name || 'U').charAt(0).toUpperCase()}
+                </span>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center rounded-full pointer-events-none">
+                  <Edit2 className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="text-center lg:text-left">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2 lg:ml-8">
+              {currentData.full_name || 'No name set'}
+            </h2>
+            {isEditing && (
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
               <label
                 htmlFor="profilePicture"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all text-sm font-medium text-gray-700"
@@ -227,7 +260,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 id="profilePicture"
                 type="file"
                 accept="image/*"
-                onChange={handleImageChange}
+                onChange={(e) => {
+                  handleImageChange(e)
+                  if (!isEditing) {
+                    setIsEditing(true)
+                  }
+                }}
                 className="sr-only"
               />
               {profilePicture && (
@@ -249,13 +287,26 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   )}
                 </Button>
               )}
-            </div>
-          )}
+              </div>
+            )}
+            {!isEditing && (
+              <p className="text-xs text-gray-500 text-center lg:text-left mt-2">
+                Click on the profile picture to change it
+              </p>
+            )}
+          </div>
         </div>
+        
+        {/* QR Code Section - Desktop: Right of profile picture */}
+        {userId && initialData.role === 'student' && (
+          <div className="hidden lg:flex flex-shrink-0 items-start">
+            <ProfileQRCode userId={userId} />
+          </div>
+        )}
       </div>
 
       {/* Profile Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-6">
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="fullName" className="text-sm font-semibold text-gray-700">
@@ -360,7 +411,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
           {isEditing ? (
             <>
               <Button

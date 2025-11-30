@@ -30,17 +30,23 @@ export function EnrollmentRequestActions({ requestId }: EnrollmentRequestActions
       setIsApproving(true)
       setError(null)
 
+      console.log('[EnrollmentRequestActions] Approving request:', requestId)
       const result = await approveEnrollmentRequest(requestId)
 
       if (!result.success) {
+        console.error('[EnrollmentRequestActions] Approval failed:', result.error)
         setError(result.error || 'Failed to approve request')
         return
       }
 
+      console.log('[EnrollmentRequestActions] ✅ Approval successful, refreshing page...')
       router.refresh()
+      
+      // Show success message
+      alert('Enrollment request approved! The student should receive a notification.')
     } catch (err) {
+      console.error('[EnrollmentRequestActions] Exception:', err)
       setError('An unexpected error occurred')
-      console.error('Approve error:', err)
     } finally {
       setIsApproving(false)
     }

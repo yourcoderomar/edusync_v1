@@ -7,7 +7,7 @@ import { getQuizzesByClass } from '@/lib/actions/quizzes/get-class-quizzes'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
-import { Calendar, FileText, BookOpen, Users } from 'lucide-react'
+import { Calendar, FileText, Users } from 'lucide-react'
 import type { Database } from '@/types/database'
 
 interface ClassDetailsPageProps {
@@ -68,12 +68,13 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
   // Fetch class data and related information in parallel
   const [classResult, sessionsResult, sessionsCountResult, quizzesResult] = await Promise.all([
     getClassById(classId),
-    // Get recent sessions for this class (for display) - also used for attendance query
+    // Get recent sessions for this class (limit to 5 for display) - also used for attendance query
     supabase
       .from('class_sessions')
       .select('id, session_date, starts_at, ends_at')
       .eq('class_id', classId)
-      .order('session_date', { ascending: false }),
+      .order('session_date', { ascending: false })
+      .limit(5),
     // Get total count of sessions
     supabase
       .from('class_sessions')
@@ -99,8 +100,7 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
 
   const classData = classResult.data
   const creator = classData.creator as any
-  const allSessions = sessionsResult.data || []
-  const sessions = allSessions.slice(0, 5) // Limit to 5 for display
+  const sessions = sessionsResult.data || []
   const quizzes = quizzesResult.success ? quizzesResult.data : []
   const totalSessions = sessionsCountResult.count || 0
   
@@ -145,7 +145,7 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
             </div>
           </div>
           <Button asChild variant="outline">
-            <Link href="/student/classes">Back to classes</Link>
+            <Link href="/student/my-learning">Back to My Learning</Link>
           </Button>
         </div>
       </header>
@@ -153,7 +153,7 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
       {/* Statistics */}
       <section aria-labelledby="stats-heading" className="mb-8">
         <h2 id="stats-heading" className="sr-only">Class Statistics</h2>
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -192,21 +192,6 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
               <p className="mt-1 text-sm text-gray-500">Present sessions</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <BookOpen className="h-4 w-4" />
-                Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-gray-900">
-                {totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0}%
-              </p>
-              <p className="mt-1 text-sm text-gray-500">Attendance rate</p>
-            </CardContent>
-          </Card>
         </div>
       </section>
 
@@ -231,7 +216,7 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
               </p>
             ) : (
               <div className="space-y-3">
-                {(sessions as any[]).slice(0, 5).map((session) => (
+                {(sessions as any[]).map((session) => (
                   <div
                     key={session.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"

@@ -57,6 +57,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get current profile to check for existing profile picture
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('profile_picture_url')
+      .eq('id', user.id)
+      .single()
+
+    // Delete old profile picture if it exists
+    if (currentProfile?.profile_picture_url) {
+      try {
+        // Extract file path from URL
+        // URL format: https://{project-ref}.supabase.co/storage/v1/object/public/profile-pictures/{user.id}/profile.{ext}
+        const url = currentProfile.profile_picture_url
+        const urlParts = url.split('/profile-pictures/')
+        if (urlParts.length === 2) {
+          const oldFilePath = urlParts[1]
+          console.log('🗑️ Deleting old profile picture:', oldFilePath)
+          
+          const { error: deleteError } = await supabase.storage
+            .from('profile-pictures')
+            .remove([oldFilePath])
+
+          if (deleteError) {
+            console.warn('⚠️ Failed to delete old profile picture:', deleteError.message)
+            // Continue with upload even if deletion fails
+          } else {
+            console.log('✅ Old profile picture deleted successfully')
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error while deleting old profile picture:', error)
+        // Continue with upload even if deletion fails
+      }
+    }
+
     // Generate filename with user folder structure (required by RLS policy)
     const fileExt = profilePictureFile.name.split('.').pop()
     const fileName = `profile.${fileExt}`

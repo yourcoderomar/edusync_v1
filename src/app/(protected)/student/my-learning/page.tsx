@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,15 +17,22 @@ type Enrollment = {
   enrolled_at: string
 }
 
+type InstructorData = {
+  id: string
+  full_name: string | null
+  profile_picture_url: string | null
+}
+
 type ClassData = {
   id: string
   name: string
   description: string | null
   created_at: string
+  teacher_id: string
 }
 
 type EnrollmentWithClass = Enrollment & {
-  classes: ClassData | null
+  classes: (ClassData & { instructor: InstructorData | null }) | null
 }
 
 /**
@@ -59,14 +67,21 @@ export default async function MyLearningPage() {
 
     const { data: classes, error: classesError } = await supabase
       .from('classes')
-      .select('id, name, description, created_at')
+      .select(`
+        id, 
+        name, 
+        description, 
+        created_at,
+        teacher_id,
+        instructor:profiles!classes_teacher_id_fkey(id, full_name, profile_picture_url)
+      `)
       .in('id', classIds)
 
     if (classesError) {
       console.error('Error fetching classes for My Learning:', classesError)
     }
 
-    const classesList = (classes || []) as ClassData[]
+    const classesList = (classes || []) as Array<ClassData & { instructor: InstructorData | null }>
     const classesMap = new Map(classesList.map((c) => [c.id, c]))
 
     enrolledClasses = enrollmentsList.map((enrollment) => ({
@@ -86,63 +101,90 @@ export default async function MyLearningPage() {
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Enrolled Classes</CardTitle>
-          <CardDescription>
-            {classesList.length === 0
-              ? 'You are not enrolled in any classes yet.'
-              : `${classesList.length} class${classesList.length !== 1 ? 'es' : ''} in your learning list`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {classesList.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-gray-500 mb-4">
-                You don&apos;t have any classes in your learning list yet. Enroll with an instructor and request to
-                join their classes to get started.
-              </p>
-              <Button asChild>
-                <Link href="/student/enrollment-requests">Go to Enrollment Requests</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {classesList.map((enrollment) => {
-                const classData = enrollment.classes
-                if (!classData || !classData.id) return null
+      {classesList.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-sm text-gray-500 mb-4">
+              You don&apos;t have any classes in your learning list yet. Enroll with an instructor and request to
+              join their classes to get started.
+            </p>
+            <Button asChild>
+              <Link href="/student/instructors">Browse Instructors</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {classesList.map((enrollment) => {
+            const classData = enrollment.classes
+            if (!classData || !classData.id) return null
 
-                return (
-                  <article
-                    key={`${enrollment.class_id}-${enrollment.user_id}`}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <Link href={`/student/classes/${classData.id}`} className="flex-1">
-                        <h2 className="font-semibold text-lg text-gray-900">{classData.name}</h2>
-                        {classData.description && (
-                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">{classData.description}</p>
-                        )}
-                        <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                          <time dateTime={enrollment.enrolled_at}>
-                            Enrolled {formatDate(enrollment.enrolled_at)}
-                          </time>
+            const instructor = classData.instructor
+            const initials = instructor?.full_name
+              ? instructor.full_name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2)
+              : 'I'
+
+            return (
+              <Card
+                key={`${enrollment.class_id}-${enrollment.user_id}`}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+              >
+                <Link href={`/student/classes/${classData.id}`}>
+                  <CardHeader>
+                    <div className="flex items-start gap-3 mb-3">
+                      {instructor?.profile_picture_url ? (
+                        <div className="relative h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
+                          <Image
+                            src={instructor.profile_picture_url}
+                            alt={`${instructor.full_name || 'Instructor'}'s profile picture`}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-                      </Link>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/student/classes/${classData.id}`}>Open Class</Link>
-                      </Button>
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-semibold text-sm">{initials}</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="line-clamp-2">{classData.name}</CardTitle>
+                        {instructor?.full_name && (
+                          <p className="text-sm text-gray-500 mt-1">by {instructor.full_name}</p>
+                        )}
+                      </div>
                     </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    {classData.description && (
+                      <CardDescription className="line-clamp-3">
+                        {classData.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <time dateTime={enrollment.enrolled_at}>
+                        Enrolled {formatDate(enrollment.enrolled_at)}
+                      </time>
+                    </div>
+                    <Button variant="outline" size="sm" className="mt-4 w-full">
+                      Open Class
+                    </Button>
+                  </CardContent>
+                </Link>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }
+
+
 
 
 

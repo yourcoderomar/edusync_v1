@@ -153,6 +153,8 @@ export async function markStudentAttendance(sessionId: string, classId: string) 
 
     // Revalidate attendance pages
     revalidatePath(`/admin/classes/${classId}/sessions/${sessionId}/attendance`)
+    revalidatePath(`/student/classes/${classId}/sessions/${sessionId}`)
+    revalidatePath(`/student/classes/${classId}`)
     revalidatePath(`/student`)
 
     return { 

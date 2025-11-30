@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, getUser, isAdminOrInstructor } from '@/lib/supabase/server'
 import { handleServerError } from '@/lib/utils/errors'
+import { createNotification } from '@/lib/actions/notifications/create-notification'
 
 /**
  * Create enrollment request (student)
@@ -18,6 +19,7 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       return { success: false, error: 'Not authenticated' }
     }
 
+
     // Get class to determine instructor
     const { data: classData, error: classError } = await supabase
       .from('classes')
@@ -25,7 +27,14 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       .eq('id', classId)
       .single()
 
-    if (classError || !classData) {
+    if (classError) {
+      return { 
+        success: false, 
+        error: classError.code === 'PGRST116' ? 'Class not found' : 'Error looking up class. Please try again.' 
+      }
+    }
+
+    if (!classData) {
       return { success: false, error: 'Class not found' }
     }
 
@@ -77,12 +86,17 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
     }
 
     // Check if already enrolled
-    const { data: existingEnrollment } = await supabase
+    const { data: existingEnrollment, error: enrollmentCheckError } = await supabase
       .from('enrollments')
       .select('class_id')
       .eq('class_id', classId)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
+
+    if (enrollmentCheckError && enrollmentCheckError.code !== 'PGRST116') {
+      // PGRST116 is "not found" which is expected, other errors are real issues
+      return { success: false, error: 'Error checking enrollment status. Please try again.' }
+    }
 
     if (existingEnrollment) {
       return { success: false, error: 'You are already enrolled in this class' }
@@ -94,14 +108,27 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       .select('id, status')
       .eq('class_id', classId)
       .eq('user_id', user.id)
-      .eq('status', 'pending')
       .maybeSingle()
 
     if (existingRequest) {
-      return { success: false, error: 'You already have a pending request for this class' }
+      if (existingRequest.status === 'pending') {
+        return { success: false, error: 'You already have a pending request for this class' }
+      }
+      // If there's a rejected request, delete it so they can create a new one
+      // (Due to UNIQUE constraint on class_id + user_id)
+      if (existingRequest.status === 'rejected') {
+        const { error: deleteError } = await supabase
+          .from('enrollment_requests')
+          .delete()
+          .eq('id', existingRequest.id)
+        
+        if (deleteError) {
+          return { success: false, error: 'Error cleaning up previous request. Please try again.' }
+        }
+      }
     }
 
-    // Note: Rejected requests can be re-applied (they're kept for history)
+    // Note: Rejected requests are deleted when rejected, so students can re-apply
 
     // Create request
     const { data, error } = await supabase
@@ -115,10 +142,23 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      // Return more specific error message
+      if (error.code === '23505') {
+        return { success: false, error: 'You already have a request for this class' }
+      }
+      if (error.code === '23503') {
+        return { success: false, error: 'Invalid class or user reference' }
+      }
+      throw error
+    }
 
-    revalidatePath('/student/enrollment-requests')
+    if (!data) {
+      return { success: false, error: 'Failed to create enrollment request. Please try again.' }
+    }
+
     revalidatePath('/admin/enrollment-requests')
+    revalidatePath('/student/my-learning')
 
     return {
       success: true,
@@ -169,13 +209,14 @@ export async function approveEnrollmentRequest(requestId: string) {
     if (enrollmentError) throw enrollmentError
 
     // Ensure instructor_enrollments has a record linking this student and the class instructor
+    // Also get class name for notification
     const { data: classData, error: classError } = await supabase
       .from('classes')
-      .select('teacher_id')
+      .select('teacher_id, name')
       .eq('id', typedRequest.class_id)
       .single()
 
-    const typedClassData2 = classData as { teacher_id: string | null } | null
+    const typedClassData2 = classData as { teacher_id: string | null; name: string } | null
 
     if (!classError && typedClassData2 && typedClassData2.teacher_id) {
       const teacherId = typedClassData2.teacher_id
@@ -210,8 +251,23 @@ export async function approveEnrollmentRequest(requestId: string) {
 
     if (updateError) throw updateError
 
+    // Get class name for notification
+    const className = typedClassData2?.name || 'the class'
+
+    // Create notification for the student
+    await createNotification({
+      user_id: typedRequest.user_id,
+      title: 'Enrollment Request Approved',
+      message: `Your enrollment request for "${className}" has been approved. You can now access the class.`,
+      type: 'enrollment',
+      link: '/student/my-learning',
+      metadata: {
+        class_id: typedRequest.class_id,
+        request_id: requestId,
+      },
+    })
+
     revalidatePath('/admin/enrollment-requests')
-    revalidatePath('/student/enrollment-requests')
 
     return {
       success: true,
@@ -240,32 +296,52 @@ export async function rejectEnrollmentRequest(requestId: string, reason?: string
     // Get request details
     const { data: request, error: requestError } = await supabase
       .from('enrollment_requests')
-      .select('status')
+      .select('status, user_id, class_id')
       .eq('id', requestId)
       .single()
 
     if (requestError) throw requestError
 
-    const typedRequest2 = request as { status: string } | null
+    const typedRequest2 = request as { status: string; user_id: string; class_id: string } | null
     if (!typedRequest2 || typedRequest2.status !== 'pending') {
       return { success: false, error: 'This request has already been processed' }
     }
 
-    // Update request status
-    const { error: updateError } = await supabase
+    // Get class name for notification before deleting
+    const { data: classData } = await supabase
+      .from('classes')
+      .select('name')
+      .eq('id', typedRequest2.class_id)
+      .single()
+
+    const className = classData ? (classData as { name: string }).name : 'the class'
+
+    // Create notification for the student before deleting the request
+    await createNotification({
+      user_id: typedRequest2.user_id,
+      title: 'Enrollment Request Rejected',
+      message: reason
+        ? `Your enrollment request for "${className}" has been rejected. Reason: ${reason}`
+        : `Your enrollment request for "${className}" has been rejected.`,
+      type: 'enrollment',
+      link: `/student/instructors`,
+      metadata: {
+        class_id: typedRequest2.class_id,
+        request_id: requestId,
+        reason: reason || null,
+      },
+    })
+
+    // Delete the rejected request so the student can re-apply
+    // This allows them to create a new request since there's a UNIQUE constraint on (class_id, user_id)
+    const { error: deleteError } = await supabase
       .from('enrollment_requests')
-      .update({
-        status: 'rejected',
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        notes: reason || null,
-      } as never)
+      .delete()
       .eq('id', requestId)
 
-    if (updateError) throw updateError
+    if (deleteError) throw deleteError
 
     revalidatePath('/admin/enrollment-requests')
-    revalidatePath('/student/enrollment-requests')
 
     return {
       success: true,

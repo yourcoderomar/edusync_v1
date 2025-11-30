@@ -67,72 +67,80 @@ export default async function StudentInstructorsPage() {
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Instructors</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-4xl font-bold text-gray-900 leading-tight">Instructors</h1>
+        <p className="mt-3 text-gray-600 leading-relaxed">
           Browse all instructors. You can enroll with any instructor from this page.
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Instructors</CardTitle>
-          <CardDescription>
-            See all instructors and your enrollment status with each one.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {typedInstructors.length === 0 ? (
-            <p className="text-sm text-gray-500">
+      {typedInstructors.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-500 text-center py-8">
               No instructors are available yet. Please check back later.
             </p>
-          ) : (
-            <ul className="space-y-4">
-              {typedInstructors.map((instructor) => {
-                const enrollment = enrollmentByInstructorId.get(instructor.id)
-                const isEnrolled = enrollment?.status === 'approved'
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {typedInstructors.map((instructor) => {
+            const enrollment = enrollmentByInstructorId.get(instructor.id)
+            const isEnrolled = enrollment?.status === 'approved'
+            const initials = (instructor.full_name || 'U')
+              .split(' ')
+              .map(n => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
 
-                return (
-                  <li
-                    key={instructor.id}
-                    className="border border-gray-200 rounded-lg p-4 bg-white flex items-center justify-between gap-4"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        <Link
-                          href={`/student/instructors/${instructor.id}`}
-                          className="hover:underline"
-                        >
-                          {instructor.full_name || 'Unnamed Instructor'}
-                        </Link>
-                      </p>
-                      {instructor.phone && (
-                        <p className="mt-1 text-sm text-gray-600">
-                          Phone: {instructor.phone}
-                        </p>
-                      )}
-                      <p className="mt-1 text-xs text-gray-500">
-                        Status:{' '}
-                        <span className="capitalize">
-                          {enrollment ? enrollment.status : 'not enrolled'}
-                        </span>
-                      </p>
+            return (
+              <Card
+                key={instructor.id}
+                className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg mb-1">
+                          <Link
+                            href={`/student/instructors/${instructor.id}`}
+                            className="hover:text-blue-600 transition-colors"
+                          >
+                            {instructor.full_name || 'Unnamed Instructor'}
+                          </Link>
+                        </CardTitle>
+                        {instructor.phone && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {instructor.phone}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {isEnrolled ? (
-                        <span className="text-xs font-semibold text-green-600">
-                          Enrolled
-                        </span>
-                      ) : (
-                        <EnrollWithInstructorButton instructorId={instructor.id} />
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 capitalize">
+                      {enrollment ? enrollment.status : 'not enrolled'}
+                    </span>
+                    {isEnrolled ? (
+                      <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2 py-1 rounded-full">
+                        Enrolled
+                      </span>
+                    ) : (
+                      <EnrollWithInstructorButton instructorId={instructor.id} />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }

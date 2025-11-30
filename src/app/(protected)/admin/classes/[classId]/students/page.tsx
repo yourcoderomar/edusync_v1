@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getClassById } from '@/lib/actions/classes/get-classes'
 import { getStudentsByClass } from '@/lib/actions/students/get-students'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatDate } from '@/lib/utils/format'
+import { Card, CardContent } from '@/components/ui/card'
+import { ClassStudentCard } from '@/components/students/ClassStudentCard'
 
 type EnrollmentWithStudent = {
   user_id: string
@@ -101,53 +100,13 @@ export default async function ClassStudentsPage({ params }: ClassStudentsPagePro
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {enrollments.map((enrollment) => {
-              const student = enrollment.student
-              if (!student) return null
-
-              return (
-                <Card key={enrollment.user_id} className="overflow-hidden">
-                  <CardContent className="p-6">
-                    <Link href={`/admin/students/${student.id}`}>
-                      <div className="flex flex-col items-center text-center space-y-4 cursor-pointer hover:opacity-80 transition-opacity">
-                        {/* Student Image */}
-                        <div className="flex-shrink-0">
-                          {student.profile_picture_url ? (
-                            <div className="relative h-24 w-24 rounded-full overflow-hidden border-2 border-gray-200">
-                              <Image
-                                src={student.profile_picture_url}
-                                alt={student.full_name || 'Student'}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center border-2 border-gray-200">
-                              <span className="text-blue-600 font-bold text-2xl">
-                                {(student.full_name || 'S').charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Student Info */}
-                        <div className="w-full">
-                          <h3 className="font-semibold text-lg text-gray-900">
-                            {student.full_name || 'Unknown Student'}
-                          </h3>
-                          {student.phone && (
-                            <p className="text-sm text-gray-500 mt-1">{student.phone}</p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-2">
-                            Enrolled {formatDate(enrollment.enrolled_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )
-            })}
+            {enrollments.map((enrollment) => (
+              <ClassStudentCard
+                key={enrollment.user_id}
+                enrollment={enrollment}
+                classId={classId}
+              />
+            ))}
           </div>
         )}
       </section>

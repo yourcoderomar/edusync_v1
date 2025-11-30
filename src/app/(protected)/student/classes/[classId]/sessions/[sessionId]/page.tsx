@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient, getUser } from '@/lib/supabase/server'
 import { getQuizzesBySession } from '@/lib/actions/quizzes/get-quizzes'
+import { getStudentAttendance } from '@/lib/actions/attendance/get-attendance'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
@@ -61,57 +62,58 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
 
   const supabase = await createClient()
 
-  // Verify student is enrolled in this class
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('class_id, user_id')
-    .eq('user_id', user.id)
-    .eq('class_id', classId)
-    .single()
-
-  if (!enrollment) {
-    notFound()
-  }
-
   type SessionWithClass = Pick<Database['public']['Tables']['class_sessions']['Row'], 'id' | 'session_date' | 'starts_at' | 'ends_at'> & {
     classes?: { id: string; name: string } | null
   }
-  type AttendanceRow = Pick<Database['public']['Tables']['attendance']['Row'], 'id' | 'status' | 'marked_at'>
+  type AttendanceRow = Pick<Database['public']['Tables']['attendance']['Row'], 'session_id' | 'student_id' | 'status' | 'marked_at'>
   type QuizAttemptRow = Pick<Database['public']['Tables']['quiz_attempts']['Row'], 'quiz_id' | 'score' | 'submitted_at'>
 
-  // Fetch session data, attendance, and quizzes
-  const { data: sessionData } = await supabase
-    .from('class_sessions')
-    .select(`
-      id,
-      session_date,
-      starts_at,
-      ends_at,
-      classes:class_id (
+  // Fetch all data in parallel for better performance
+  const [enrollmentResult, sessionResult, attendanceResult, quizzesResult] = await Promise.all([
+    // Verify student is enrolled in this class
+    supabase
+      .from('enrollments')
+      .select('class_id, user_id')
+      .eq('user_id', user.id)
+      .eq('class_id', classId)
+      .single(),
+    // Fetch session data
+    supabase
+      .from('class_sessions')
+      .select(`
         id,
-        name
-      )
-    `)
-    .eq('id', sessionId)
-    .eq('class_id', classId)
-    .single()
+        session_date,
+        starts_at,
+        ends_at,
+        classes:class_id (
+          id,
+          name
+        )
+      `)
+      .eq('id', sessionId)
+      .eq('class_id', classId)
+      .single(),
+    // Fetch attendance using server action (handles RLS properly)
+    getStudentAttendance(sessionId),
+    // Fetch quizzes
+    getQuizzesBySession(sessionId),
+  ])
 
-  const { data: attendanceData } = await supabase
-    .from('attendance')
-    .select('id, status, marked_at')
-    .eq('session_id', sessionId)
-    .eq('student_id', user.id)
-    .maybeSingle()
-
-  const quizzesResult = await getQuizzesBySession(sessionId)
-
-  if (!sessionData) {
+  if (!enrollmentResult.data) {
     notFound()
   }
 
-  const session = sessionData as SessionWithClass
+  if (!sessionResult.data) {
+    notFound()
+  }
+
+  const session = sessionResult.data as SessionWithClass
   const classData = session.classes
-  const attendance = (attendanceData || null) as AttendanceRow | null
+  
+  // Handle attendance result from server action
+  const attendance = attendanceResult.success && attendanceResult.data
+    ? attendanceResult.data as AttendanceRow
+    : null
   
   if (!quizzesResult.success && 'error' in quizzesResult) {
     console.error('Error fetching quizzes:', quizzesResult.error)
@@ -119,7 +121,7 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
   
   const quizzes = quizzesResult.success ? (quizzesResult.data || []) : []
 
-  // Get quiz attempts for this student
+  // Get quiz attempts for this student (only if there are quizzes)
   const quizIds = (quizzes as any[]).map(q => q.id)
   const { data: quizAttemptsData } = quizIds.length > 0
     ? await supabase

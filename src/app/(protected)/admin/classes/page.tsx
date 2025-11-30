@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getClasses } from '@/lib/actions/classes/get-classes'
+import { getUserProfile } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatDate } from '@/lib/utils/format'
+import { Card, CardContent } from '@/components/ui/card'
+import { ClassCard } from '@/components/classes/ClassCard'
 
 export const metadata: Metadata = {
   title: 'Classes',
@@ -18,6 +19,10 @@ export const metadata: Metadata = {
  */
 export default async function AdminClassesPage() {
   const result = await getClasses()
+  const profile = await getUserProfile()
+  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' } | null
+  const isAdmin = typedProfile?.role === 'admin'
+  const currentUserId = typedProfile?.id
 
   return (
     <>
@@ -55,27 +60,19 @@ export default async function AdminClassesPage() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {(result as { success: true; data: any[] }).data.map((classItem) => (
-              <article key={classItem.id}>
-                <Link href={`/admin/classes/${classItem.id}`}>
-                  <Card className="h-full transition-shadow hover:shadow-md">
-                    <CardHeader>
-                      <CardTitle className="line-clamp-1">{classItem.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {classItem.description || 'No description'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-gray-500">
-                        <time dateTime={classItem.created_at}>
-                          Created {formatDate(classItem.created_at)}
-                        </time>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </article>
-            ))}
+            {(result as { success: true; data: any[] }).data.map((classItem) => {
+              const canEdit = isAdmin || (typedProfile?.role === 'instructor' && classItem.teacher_id === currentUserId)
+              const canDelete = isAdmin || (typedProfile?.role === 'instructor' && classItem.teacher_id === currentUserId)
+              
+              return (
+                <ClassCard
+                  key={classItem.id}
+                  classItem={classItem}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                />
+              )
+            })}
           </div>
         )}
       </section>

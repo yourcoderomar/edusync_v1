@@ -127,7 +127,7 @@ export function SignUpForm() {
                 >
                   <SelectValue placeholder="Code">
                     {field.value && (
-                      <span className="flex items-center gap-1.5 text-gray-900 font-medium">
+                      <span className="flex items-center gap-1.5 text-[#353535] font-medium">
                         <span className="text-base">
                           {countryCodes.find(c => c.code === field.value)?.flag}
                         </span>
@@ -141,7 +141,7 @@ export function SignUpForm() {
                     <SelectItem key={`phone-${country.code}-${country.country}`} value={country.code}>
                       <span className="flex items-center gap-2">
                         <span className="text-lg">{country.flag}</span>
-                        <span className="text-gray-900 font-medium">{country.code}</span>
+                        <span className="text-[#353535] font-medium">{country.code}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -193,7 +193,7 @@ export function SignUpForm() {
                 >
                   <SelectValue placeholder="Code">
                     {field.value && (
-                      <span className="flex items-center gap-1.5 text-gray-900 font-medium">
+                      <span className="flex items-center gap-1.5 text-[#353535] font-medium">
                         <span className="text-base">
                           {countryCodes.find(c => c.code === field.value)?.flag}
                         </span>
@@ -207,7 +207,7 @@ export function SignUpForm() {
                     <SelectItem key={`parent-${country.code}-${country.country}`} value={country.code}>
                       <span className="flex items-center gap-2">
                         <span className="text-lg">{country.flag}</span>
-                        <span className="text-gray-900 font-medium">{country.code}</span>
+                        <span className="text-[#353535] font-medium">{country.code}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -276,7 +276,7 @@ export function SignUpForm() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#353535]/70 hover:text-[#353535] focus:outline-none"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
@@ -311,7 +311,7 @@ export function SignUpForm() {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#353535]/70 hover:text-[#353535] focus:outline-none"
             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
             {showConfirmPassword ? (
@@ -344,9 +344,9 @@ export function SignUpForm() {
         )}
       </Button>
 
-      <p className="text-center text-sm text-gray-700">
+      <p className="text-center text-sm text-[#353535]">
         Already have an account?{' '}
-        <Link href="/signin" className="font-semibold text-blue-700 hover:text-blue-800 underline-offset-2 hover:underline">
+        <Link href="/signin" className="font-semibold text-[#353535] hover:text-[#353535] underline-offset-2 hover:underline">
           Sign in
         </Link>
       </p>

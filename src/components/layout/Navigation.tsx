@@ -28,7 +28,6 @@ const studentNavItems: NavItem[] = [
   { name: 'Dashboard', href: '/student/dashboard' },
   { name: 'My Learning', href: '/student/my-learning' },
   { name: 'Instructors', href: '/student/instructors' },
-  { name: 'Enrollment Requests', href: '/student/enrollment-requests' },
   { name: 'Profile', href: '/profile' },
 ]
 

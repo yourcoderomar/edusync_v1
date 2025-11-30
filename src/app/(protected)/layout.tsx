@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getUser, getUserProfile } from '@/lib/supabase/server'
-import { getPendingEnrollmentCount } from '@/lib/actions/enrollment/get-pending-count'
 import { Header } from '@/components/layout/Header'
-import { Navigation } from '@/components/layout/Navigation'
 import { Footer } from '@/components/layout/Footer'
 
 /**
@@ -23,23 +21,11 @@ export default async function ProtectedLayout({
     redirect('/signin')
   }
 
-  // Type assertion: profile exists after null check
-  const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
-
-  // Get pending enrollment count for admins
-  const pendingCount =
-    typedProfile.role === 'admin'
-      ? await getPendingEnrollmentCount()
-      : typedProfile.role === 'instructor'
-        ? await getPendingEnrollmentCount({ instructorId: typedProfile.id })
-        : 0
-
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <Navigation role={typedProfile.role} pendingRequestsCount={pendingCount} />
 
-      <main className="flex-1 bg-gray-50">
+      <main className="flex-1 bg-gray-50 min-h-[calc(100vh-64px)]">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </div>

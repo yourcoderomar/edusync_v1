@@ -22,8 +22,8 @@ export default async function AdminEnrollmentRequestsPage() {
   const result = await getAllEnrollmentRequests()
   const requests = result.success ? (result.data ?? []) : []
 
+  // Only show pending requests - no history
   const pendingRequests = requests.filter((r: any) => r.status === 'pending')
-  const processedRequests = requests.filter((r: any) => r.status !== 'pending')
 
   return (
     <>
@@ -116,70 +116,6 @@ export default async function AdminEnrollmentRequestsPage() {
           </div>
         )}
       </section>
-
-      {/* Processed Requests */}
-      {processedRequests.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Processed Requests ({processedRequests.length})
-          </h2>
-          
-          <div className="space-y-4">
-            {processedRequests.map((request: any) => {
-              const student = request.student
-              const classData = request.class
-              const reviewer = request.reviewer
-
-              return (
-                <Card key={request.id} className="opacity-75">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="flex-shrink-0">
-                          {student?.profile_picture_url ? (
-                            <div className="relative h-12 w-12 rounded-full overflow-hidden">
-                              <Image
-                                src={student.profile_picture_url}
-                                alt={`${student.full_name || 'Student'}'s profile picture`}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                              <User className="h-6 w-6 text-gray-500" />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {student?.full_name || 'Unknown Student'}
-                            </h3>
-                            <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
-                              {request.status}
-                            </Badge>
-                          </div>
-                          
-                          <p className="text-sm text-gray-600 mt-1">
-                            {classData?.name || 'Unknown Class'}
-                          </p>
-
-                          <div className="mt-2 text-sm text-gray-500">
-                            <p>Reviewed by {reviewer?.full_name || 'Unknown'}</p>
-                            <p>{formatDate(request.reviewed_at)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
-      )}
     </>
   )
 }

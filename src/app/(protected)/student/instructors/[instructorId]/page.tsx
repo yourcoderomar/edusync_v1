@@ -104,26 +104,33 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
     )
   }
 
+  // Get enrollment request statuses for all classes
+  const { getEnrollmentRequestStatuses } = await import('@/lib/actions/enrollment/get-enrollment-request-status')
+  const requestStatusesResult = await getEnrollmentRequestStatuses(classIds)
+  const requestStatuses = requestStatusesResult.success && requestStatusesResult.data
+    ? requestStatusesResult.data
+    : new Map<string, { id: string; status: string; created_at: string }>()
+
   return (
     <>
       <header className="mb-8">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-4xl font-bold text-gray-900 leading-tight">
               {typedInstructor.full_name || 'Instructor'}
             </h1>
             {typedInstructor.phone && (
-              <p className="mt-2 text-gray-600">
+              <p className="mt-3 text-gray-600 leading-relaxed">
                 Phone: {typedInstructor.phone}
               </p>
             )}
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-gray-500 leading-relaxed">
               Classes taught by this instructor
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
             {typedInstructorEnrollment?.status === 'approved' ? (
-              <span className="text-xs font-semibold text-green-600">
+              <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2 py-1 rounded-full">
                 Enrolled with this instructor
               </span>
             ) : (
@@ -131,7 +138,7 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
             )}
             <Link
               href="/student/instructors"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-blue-500 hover:text-blue-600 hover:underline transition-colors"
             >
               Back to Instructors
             </Link>
@@ -157,11 +164,13 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
             <div className="space-y-4">
               {typedClasses.map((cls) => {
                 const isEnrolled = enrolledClassIds.has(cls.id)
+                const requestStatus = requestStatuses.get(cls.id)
+                const hasPendingRequest = requestStatus?.status === 'pending'
 
                 return (
                   <article
                     key={cls.id}
-                    className="border border-gray-200 rounded-lg p-4 flex items-start justify-between gap-4 hover:bg-gray-50 transition-colors"
+                    className="border border-gray-200 rounded-xl p-5 flex items-start justify-between gap-4 hover:bg-teal-50 hover:border-teal-200 transition-all duration-200"
                   >
                     <div className="space-y-2">
                       <h2 className="font-semibold text-lg text-gray-900">
@@ -177,14 +186,23 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
                       </p>
                       <p className="mt-1 text-xs font-medium">
                         {isEnrolled ? (
-                          <span className="text-green-600">You are enrolled in this class</span>
+                          <span className="text-teal-600 font-medium">You are enrolled in this class</span>
+                        ) : hasPendingRequest ? (
+                          <span className="text-amber-600 font-medium">Enrollment request pending</span>
                         ) : (
                           <span className="text-gray-500">You are not enrolled in this class</span>
                         )}
                       </p>
-                      {!isEnrolled && (
+                      {!isEnrolled && !hasPendingRequest && (
                         <div className="mt-2">
                           <RequestEnrollmentButton classId={cls.id} className="w-full sm:w-auto" />
+                        </div>
+                      )}
+                      {hasPendingRequest && (
+                        <div className="mt-2">
+                          <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
+                            You have a pending enrollment request for this class. Requested on {formatDate(requestStatus.created_at)}.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -192,14 +210,19 @@ export default async function InstructorClassesPage({ params }: InstructorClasse
                       {isEnrolled && (
                         <Link
                           href={`/student/classes/${cls.id}`}
-                          className="text-sm text-blue-600 hover:underline"
+                          className="text-sm text-blue-500 hover:text-blue-600 hover:underline transition-colors"
                         >
                           View class details
                         </Link>
                       )}
-                      {!isEnrolled && (
+                      {!isEnrolled && !hasPendingRequest && (
                         <p className="text-[11px] text-gray-400 max-w-[180px] text-right">
                           Submit a request to join this class. You can track its status on the Enrollment Requests page.
+                        </p>
+                      )}
+                      {hasPendingRequest && (
+                        <p className="text-[11px] text-amber-600 max-w-[180px] text-right">
+                          Your request is being reviewed. You'll be notified when it's processed.
                         </p>
                       )}
                     </div>

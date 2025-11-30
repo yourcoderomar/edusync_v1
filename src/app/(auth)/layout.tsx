@@ -27,10 +27,11 @@ export default function AuthLayout({
             <Image
               src="/images/logo.png"
               alt={`${process.env.NEXT_PUBLIC_APP_NAME} logo`}
-              width={150}
-              height={50}
-              className="object-contain h-12 w-auto"
+              width={200}
+              height={65}
+              className="object-contain h-16 w-auto"
               priority
+              unoptimized
             />
           </div>
           <p className="text-sm font-medium text-gray-700">

@@ -411,6 +411,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: 'info' | 'success' | 'warning' | 'error' | 'enrollment' | 'attendance' | 'quiz' | 'session'
+          link: string | null
+          read: boolean
+          created_at: string
+          updated_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type?: 'info' | 'success' | 'warning' | 'error' | 'enrollment' | 'attendance' | 'quiz' | 'session'
+          link?: string | null
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: 'info' | 'success' | 'warning' | 'error' | 'enrollment' | 'attendance' | 'quiz' | 'session'
+          link?: string | null
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+          metadata?: Json
+        }
+      }
     }
     Views: {
       [_ in never]: never

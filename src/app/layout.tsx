@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { PageTransitionLoader } from "@/components/common/PageTransitionLoader";
 import "./globals.css";
 
 const inter = Inter({
@@ -52,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="antialiased bg-white">
+        <PageTransitionLoader />
         {children}
         <Toaster position="top-right" />
       </body>

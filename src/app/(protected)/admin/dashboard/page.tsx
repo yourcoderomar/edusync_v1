@@ -116,8 +116,8 @@ export default async function AdminDashboardPage() {
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-4xl font-bold text-gray-900 leading-tight">Admin Dashboard</h1>
+        <p className="mt-3 text-gray-600 leading-relaxed">
           Welcome back! Here&apos;s an overview of your educational platform.
         </p>
       </header>
@@ -157,12 +157,15 @@ export default async function AdminDashboardPage() {
             ) : (
               <div className="space-y-4">
                 {classesList.map((classItem) => (
-                  <article key={classItem.id} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
-                    <h3 className="font-medium text-gray-900">{classItem.name}</h3>
+                  <article 
+                    key={classItem.id} 
+                    className="border-b border-gray-200 pb-4 last:border-0 last:pb-0 hover:bg-gray-50 -mx-6 px-6 py-2 rounded-lg transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900">{classItem.name}</h3>
                     {classItem.description && (
-                      <p className="mt-1 text-sm text-gray-600">{classItem.description}</p>
+                      <p className="mt-1 text-sm text-gray-600 leading-relaxed">{classItem.description}</p>
                     )}
-                    <time className="mt-1 block text-xs text-gray-500" dateTime={classItem.created_at}>
+                    <time className="mt-2 block text-xs text-gray-500" dateTime={classItem.created_at}>
                       Created {formatDate(classItem.created_at)}
                     </time>
                   </article>
