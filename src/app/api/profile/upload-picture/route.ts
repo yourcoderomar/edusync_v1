@@ -58,11 +58,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current profile to check for existing profile picture
-    const { data: currentProfile } = await supabase
+    const { data: currentProfileRaw } = await supabase
       .from('profiles')
       .select('profile_picture_url')
       .eq('id', user.id)
       .single()
+
+    // Type assertion to help TypeScript understand the profile type
+    const currentProfile = currentProfileRaw as { profile_picture_url: string | null } | null
 
     // Delete old profile picture if it exists
     if (currentProfile?.profile_picture_url) {

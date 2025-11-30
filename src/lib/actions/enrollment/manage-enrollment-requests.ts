@@ -103,12 +103,15 @@ export async function createEnrollmentRequest(classId: string, notes?: string) {
     }
 
     // Check if already has pending request
-    const { data: existingRequest } = await supabase
+    const { data: existingRequestRaw } = await supabase
       .from('enrollment_requests')
       .select('id, status')
       .eq('class_id', classId)
       .eq('user_id', user.id)
       .maybeSingle()
+
+    // Type assertion to help TypeScript understand the request type
+    const existingRequest = existingRequestRaw as { id: string; status: string } | null
 
     if (existingRequest) {
       if (existingRequest.status === 'pending') {

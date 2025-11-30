@@ -31,7 +31,7 @@ export async function createNotificationDirect(
     const adminSupabase = createAdminClient()
     
     // Call the database function that bypasses RLS
-    const { data, error } = await adminSupabase.rpc('create_notification', {
+    const { data, error } = await (adminSupabase.rpc as any)('create_notification', {
       p_user_id: input.user_id,
       p_title: input.title,
       p_message: input.message,

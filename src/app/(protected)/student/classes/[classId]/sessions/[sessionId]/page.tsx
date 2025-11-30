@@ -68,8 +68,25 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
   type AttendanceRow = Pick<Database['public']['Tables']['attendance']['Row'], 'session_id' | 'student_id' | 'status' | 'marked_at'>
   type QuizAttemptRow = Pick<Database['public']['Tables']['quiz_attempts']['Row'], 'quiz_id' | 'score' | 'submitted_at'>
 
+  // Fetch session data separately to help TypeScript with type inference
+  const sessionQuery = supabase
+    .from('class_sessions')
+    .select(`
+      id,
+      session_date,
+      starts_at,
+      ends_at,
+      classes:class_id (
+        id,
+        name
+      )
+    `)
+    .eq('id', sessionId)
+    .eq('class_id', classId)
+    .single()
+
   // Fetch all data in parallel for better performance
-  const [enrollmentResult, sessionResult, attendanceResult, quizzesResult] = await Promise.all([
+  const [enrollmentResult, sessionResultRaw, attendanceResultRaw, quizzesResultRaw] = await Promise.all([
     // Verify student is enrolled in this class
     supabase
       .from('enrollments')
@@ -78,26 +95,17 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
       .eq('class_id', classId)
       .single(),
     // Fetch session data
-    supabase
-      .from('class_sessions')
-      .select(`
-        id,
-        session_date,
-        starts_at,
-        ends_at,
-        classes:class_id (
-          id,
-          name
-        )
-      `)
-      .eq('id', sessionId)
-      .eq('class_id', classId)
-      .single(),
+    sessionQuery,
     // Fetch attendance using server action (handles RLS properly)
     getStudentAttendance(sessionId),
     // Fetch quizzes
     getQuizzesBySession(sessionId),
   ])
+
+  // Type assertions to help TypeScript understand the result types
+  const sessionResult = sessionResultRaw as { data: SessionWithClass | null; error: unknown }
+  const attendanceResult = attendanceResultRaw as { success: boolean; data: AttendanceRow | null; error?: string }
+  const quizzesResult = quizzesResultRaw as { success: boolean; data?: unknown[]; error?: string }
 
   if (!enrollmentResult.data) {
     notFound()
@@ -107,12 +115,12 @@ export default async function StudentSessionViewPage({ params }: SessionViewPage
     notFound()
   }
 
-  const session = sessionResult.data as SessionWithClass
+  const session = sessionResult.data
   const classData = session.classes
   
   // Handle attendance result from server action
   const attendance = attendanceResult.success && attendanceResult.data
-    ? attendanceResult.data as AttendanceRow
+    ? attendanceResult.data
     : null
   
   if (!quizzesResult.success && 'error' in quizzesResult) {

@@ -51,7 +51,7 @@ export async function createNotification(
 
     // Use database function to bypass RLS (same approach as createNotificationDirect)
     // This is more reliable than direct inserts with service role
-    const { data, error } = await supabase.rpc('create_notification', {
+    const { data, error } = await (supabase.rpc as any)('create_notification', {
       p_user_id: input.user_id,
       p_title: input.title,
       p_message: input.message,
@@ -107,7 +107,7 @@ export async function createBulkNotifications(
 
     const { data, error } = await supabase
       .from('notifications')
-      .insert(notifications)
+      .insert(notifications as any)
       .select()
 
     if (error) {

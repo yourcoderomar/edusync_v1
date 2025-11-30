@@ -29,9 +29,10 @@ export async function markNotificationAsRead(
       }
     }
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ read: true })
+    const updatePayload = { read: true } as any
+    const queryBuilder = supabase.from('notifications') as any
+    const { data, error } = await queryBuilder
+      .update(updatePayload)
       .eq('id', notificationId)
       .eq('user_id', user.id) // Ensure user can only update their own notifications
       .select()
@@ -80,9 +81,10 @@ export async function markAllNotificationsAsRead(): Promise<{
       }
     }
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ read: true })
+    const updatePayload = { read: true } as any
+    const queryBuilder = supabase.from('notifications') as any
+    const { data, error } = await queryBuilder
+      .update(updatePayload)
       .eq('user_id', user.id)
       .eq('read', false)
       .select()
