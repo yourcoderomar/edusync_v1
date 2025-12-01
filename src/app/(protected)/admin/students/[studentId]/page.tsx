@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils/format'
 import { AdminEnrollStudentForm } from '@/components/enrollment/AdminEnrollStudentForm'
+import { RemoveStudentButton } from '@/components/enrollment/RemoveStudentButton'
+import { UnenrollFromInstructorButton } from '@/components/enrollment/UnenrollFromInstructorButton'
 
 /**
  * Derive quiz attempt status from data
@@ -59,9 +61,9 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
   }
 
   // Type assertion: when success is true, data exists
-  const { student, enrollments, quizAttempts } = (result as {
+  const { student, enrollments, quizAttempts, instructorEnrollments } = (result as {
     success: true
-    data: { student: any; enrollments: any[]; quizAttempts: any[] }
+    data: { student: any; enrollments: any[]; quizAttempts: any[]; instructorEnrollments: any[] }
   }).data
 
   const allClasses =
@@ -227,9 +229,16 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
                           </time>
                         </TableCell>
                         <TableCell>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/admin/classes/${classData.id}`}>View Class</Link>
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/admin/classes/${classData.id}`}>View Class</Link>
+                            </Button>
+                            <RemoveStudentButton
+                              studentId={student.id}
+                              classId={enrollment.class_id}
+                              studentName={student.full_name || 'Student'}
+                            />
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -296,6 +305,58 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
                         </TableCell>
                         <TableCell className="font-medium">
                           {attempt.score !== null ? `${attempt.score}%` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section aria-labelledby="instructors-heading" className="mt-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle id="instructors-heading">Instructor Enrollments</CardTitle>
+            <CardDescription>
+              Instructors this student is enrolled with
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!instructorEnrollments || instructorEnrollments.length === 0 ? (
+              <p className="text-sm text-gray-500">Not enrolled with any instructors yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Instructor Name</TableHead>
+                    <TableHead>Enrolled Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {instructorEnrollments.map((enrollment: any) => {
+                    const instructorData = enrollment.instructor
+                    if (!instructorData) return null
+                    
+                    return (
+                      <TableRow key={enrollment.id}>
+                        <TableCell className="font-medium">
+                          {instructorData.full_name || 'Unknown Instructor'}
+                        </TableCell>
+                        <TableCell>
+                          <time dateTime={enrollment.created_at}>
+                            {formatDate(enrollment.created_at)}
+                          </time>
+                        </TableCell>
+                        <TableCell>
+                          <UnenrollFromInstructorButton
+                            studentId={student.id}
+                            instructorId={enrollment.instructor_id}
+                            instructorName={instructorData.full_name || 'Instructor'}
+                          />
                         </TableCell>
                       </TableRow>
                     )

@@ -87,11 +87,15 @@ export async function signIn(input: SignInInput) {
     }
     
     // Default redirect based on role
-    const redirectPath = typedProfile.role === 'admin' || typedProfile.role === 'instructor'
-      ? '/admin/dashboard'
-      : '/student/dashboard'
-    
-    redirect(redirectPath)
+    if (typedProfile.role === 'admin') {
+      redirect('/admin/dashboard')
+    }
+
+    if (typedProfile.role === 'instructor') {
+      redirect('/instructor/dashboard')
+    }
+
+    redirect('/student/dashboard')
   } catch (error) {
     // redirect() throws a special error that should not be caught
     if (error && typeof error === 'object' && 'digest' in error) {

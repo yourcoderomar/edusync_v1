@@ -301,3 +301,4 @@ with check (
   OR is_instructor_for_class(class_id)
 );
 
+

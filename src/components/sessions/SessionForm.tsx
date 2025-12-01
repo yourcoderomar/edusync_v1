@@ -42,28 +42,34 @@ export function SessionForm({ classId }: SessionFormProps) {
     setIsSubmitting(true)
     setError(null)
 
-    try {
-      // Combine date and time if provided
-      const sessionDate = data.sessionDate
-      let startsAt = null
-      let endsAt = null
+      try {
+        // Combine date and time if provided, preserving the user's local time.
+        // We construct a local Date and then convert to ISO, so that:
+        // - If user selects 10:00 and they're in UTC+2, we store 08:00Z,
+        // - When read back and formatted with toLocaleTimeString, it shows 10:00 again.
+        const sessionDate = data.sessionDate
+        let startsAt: string | null = null
+        let endsAt: string | null = null
 
-      if (data.startsAt) {
-        // Create full ISO datetime from date + time
-        const startTime = data.startsAt
-        startsAt = `${sessionDate}T${startTime}:00.000Z`
-      }
+        const [year, month, day] = sessionDate.split('-').map(Number)
 
-      if (data.endsAt) {
-        const endTime = data.endsAt
-        endsAt = `${sessionDate}T${endTime}:00.000Z`
-      }
+        if (data.startsAt) {
+          const [startHour, startMinute] = data.startsAt.split(':').map(Number)
+          const startDate = new Date(year, month - 1, day, startHour, startMinute)
+          startsAt = startDate.toISOString()
+        }
 
-      const result = await createSession({
-        ...data,
-        startsAt,
-        endsAt,
-      })
+        if (data.endsAt) {
+          const [endHour, endMinute] = data.endsAt.split(':').map(Number)
+          const endDate = new Date(year, month - 1, day, endHour, endMinute)
+          endsAt = endDate.toISOString()
+        }
+
+        const result = await createSession({
+          ...data,
+          startsAt,
+          endsAt,
+        })
 
       if (!result.success) {
         setError(result.error || 'Failed to create session')

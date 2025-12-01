@@ -32,7 +32,7 @@ const studentNavItems: NavItem[] = [
 ]
 
 const instructorNavItems: NavItem[] = [
-  { name: 'Dashboard', href: '/admin/dashboard' },
+  { name: 'Dashboard', href: '/instructor/dashboard' },
   { name: 'Classes', href: '/admin/classes' },
   { name: 'Students', href: '/admin/students' },
   { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },

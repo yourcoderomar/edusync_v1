@@ -35,10 +35,7 @@ export function NavigationLinks({ navItems, pendingRequestsCount = 0 }: Navigati
               key={item.href}
               href={item.href}
               className={cn(
-                'px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap',
-                isActive
-                  ? 'bg-[#D2D7DF] text-[#353535]'
-                  : 'text-[#353535] hover:bg-[#D2D7DF] hover:text-[#353535]'
+                'px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap text-[#353535] hover:underline hover:underline-offset-4'
               )}
               aria-current={isActive ? 'page' : undefined}
             >

@@ -35,7 +35,7 @@ const studentNavItems: NavItem[] = [
 ]
 
 const instructorNavItems: NavItem[] = [
-  { name: 'Dashboard', href: '/admin/dashboard' },
+  { name: 'Dashboard', href: '/instructor/dashboard' },
   { name: 'Classes', href: '/admin/classes' },
   { name: 'Students', href: '/admin/students' },
   { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },
@@ -77,7 +77,12 @@ export async function Header() {
         ? await getPendingEnrollmentCount({ instructorId: profile.id })
         : 0
 
-  const dashboardPath = profile.role === 'student' ? '/student/dashboard' : '/admin/dashboard'
+  const dashboardPath =
+    profile.role === 'student'
+      ? '/student/dashboard'
+      : profile.role === 'instructor'
+        ? '/instructor/dashboard'
+        : '/admin/dashboard'
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#353535] bg-white">

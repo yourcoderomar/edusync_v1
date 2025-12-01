@@ -48,9 +48,11 @@ export function MobileMenu({
     }
   }, [isOpen])
 
-  const dashboardPath = pathname.startsWith('/student') 
-    ? '/student/dashboard' 
-    : '/admin/dashboard'
+  const dashboardPath = pathname.startsWith('/student')
+    ? '/student/dashboard'
+    : pathname.startsWith('/instructor')
+      ? '/instructor/dashboard'
+      : '/admin/dashboard'
 
   return (
     <>
@@ -149,7 +151,6 @@ export function MobileMenu({
             <nav className="flex-1 overflow-y-auto py-4" aria-label="Mobile navigation">
               <div className="space-y-1">
                 {navItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                   const showCount = item.showBadge && pendingRequestsCount > 0
 
                   return (
@@ -158,12 +159,8 @@ export function MobileMenu({
                       href={item.href}
                       onClick={() => setIsOpen(false)}
                       className={cn(
-                        'block px-4 py-3 text-base font-medium transition-colors',
-                        isActive
-                          ? 'bg-[#D2D7DF] text-[#353535] border-l-4 border-[#353535]'
-                          : 'text-[#353535] hover:bg-[#D2D7DF] hover:text-[#353535]'
+                        'block px-4 py-3 text-base font-medium transition-colors text-[#353535] hover:underline hover:underline-offset-4'
                       )}
-                      aria-current={isActive ? 'page' : undefined}
                     >
                       <div className="flex items-center justify-between">
                         <span>{item.name}</span>

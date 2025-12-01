@@ -33,3 +33,4 @@ using (
   is_instructor_for_class(class_id)
 );
 
+

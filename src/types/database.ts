@@ -34,6 +34,7 @@ export interface Database {
           email: string | null
           full_name: string | null
           phone: string | null
+          enrollment_passcode: string | null
           parent_phone_number: string | null
           role: 'admin' | 'student' | 'instructor'
           profile_picture_url: string | null
@@ -45,6 +46,7 @@ export interface Database {
           email?: string | null
           full_name?: string | null
           phone?: string | null
+          enrollment_passcode?: string | null
           parent_phone_number?: string | null
           role?: 'admin' | 'student' | 'instructor'
           profile_picture_url?: string | null
@@ -56,6 +58,7 @@ export interface Database {
           email?: string | null
           full_name?: string | null
           phone?: string | null
+          enrollment_passcode?: string | null
           parent_phone_number?: string | null
           role?: 'admin' | 'student' | 'instructor'
           profile_picture_url?: string | null

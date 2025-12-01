@@ -269,3 +269,4 @@ with check (
   is_admin((select auth.uid())) OR is_instructor_for_quiz(quiz_id)
 );
 
+

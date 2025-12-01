@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { createClient, getUserProfile } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils/format'
@@ -23,6 +24,12 @@ export default async function AdminDashboardPage() {
   }
 
   const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+
+  // Instructors now use the dedicated instructor dashboard
+  if (typedProfile.role === 'instructor') {
+    redirect('/instructor/dashboard')
+  }
+
   const isAdminUser = typedProfile.role === 'admin'
 
   let stats: Array<{ title: string; value: number; description: string }> = []
@@ -59,58 +66,6 @@ export default async function AdminDashboardPage() {
     ]
 
     classesList = (recentClassesResult.data || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
-  } else {
-    const { data: instructorClasses, count: instructorClassCount } = await supabase
-      .from('classes')
-      .select('id, name, description, created_at', { count: 'exact' })
-      .eq('teacher_id', typedProfile.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    const typedInstructorClasses =
-      (instructorClasses || []) as Array<{ id: string; name: string; description: string | null; created_at: string }>
-
-    const classIds = typedInstructorClasses.map((cls) => cls.id)
-
-    let studentsCount = 0
-    let pendingRequestsCount = 0
-
-    if (classIds.length > 0) {
-      const [studentsResult, requestsResult] = await Promise.all([
-        supabase
-          .from('enrollments')
-          .select('user_id', { count: 'exact', head: true })
-          .in('class_id', classIds),
-        supabase
-          .from('enrollment_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending')
-          .in('class_id', classIds),
-      ])
-
-      studentsCount = studentsResult.count || 0
-      pendingRequestsCount = requestsResult.count || 0
-    }
-
-    stats = [
-      {
-        title: 'My Classes',
-        value: instructorClassCount || 0,
-        description: 'Classes assigned to you',
-      },
-      {
-        title: 'Enrolled Students',
-        value: studentsCount,
-        description: 'Students across your classes',
-      },
-      {
-        title: 'Pending Requests',
-        value: pendingRequestsCount,
-        description: 'Enrollment requests awaiting approval',
-      },
-    ]
-
-    classesList = typedInstructorClasses
   }
 
   return (

@@ -42,12 +42,57 @@ export async function getStudents() {
  */
 export async function getStudentById(studentId: string) {
   try {
-    const userIsAdmin = await isAdmin()
-    if (!userIsAdmin) {
-      throw new ForbiddenError('Only admins can view student details')
+    const supabase = await createClient()
+
+    // Get current user's profile to determine role
+    const profile = await getUserProfile()
+    if (!profile) {
+      throw new ForbiddenError('Not authenticated')
     }
 
-    const supabase = await createClient()
+    const typedProfile = profile as { id: string; role: 'admin' | 'student' | 'instructor' }
+
+    // Students cannot view other students' details
+    if (typedProfile.role === 'student') {
+      throw new ForbiddenError('Only admins or instructors can view student details')
+    }
+
+    // Instructors can only view details for their own students
+    if (typedProfile.role === 'instructor') {
+      // First, check direct instructor_enrollments link
+      const { data: instructorEnrollment } = await supabase
+        .from('instructor_enrollments')
+        .select('id, status')
+        .eq('student_id', studentId)
+        .eq('instructor_id', typedProfile.id)
+        .eq('status', 'approved')
+        .maybeSingle()
+
+      if (!instructorEnrollment) {
+        // Fallback: check if the student is enrolled in ANY class taught by this instructor
+        const { data: instructorClasses, error: instructorClassesError } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('teacher_id', typedProfile.id)
+
+        if (!instructorClassesError && instructorClasses && instructorClasses.length > 0) {
+          const classIds = instructorClasses.map(c => (c as { id: string }).id)
+
+          const { data: existingInstructorClassEnrollment } = await supabase
+            .from('enrollments')
+            .select('id')
+            .eq('user_id', studentId)
+            .in('class_id', classIds)
+            .maybeSingle()
+
+          if (!existingInstructorClassEnrollment) {
+            throw new ForbiddenError('You can only view details for your own students')
+          }
+        } else {
+          throw new ForbiddenError('You can only view details for your own students')
+        }
+      }
+    }
 
     const { data: student, error } = await supabase
       .from('profiles')
@@ -106,12 +151,46 @@ export async function getStudentById(studentId: string) {
       console.error('Quiz attempts fetch error:', attemptsError)
     }
 
+    // Get student's instructor enrollments with instructor details
+    const { data: instructorEnrollments, error: instructorEnrollmentsError } = await supabase
+      .from('instructor_enrollments')
+      .select('id, instructor_id, status, created_at')
+      .eq('student_id', studentId)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+
+    if (instructorEnrollmentsError && typeof instructorEnrollmentsError === 'object' && 'message' in instructorEnrollmentsError) {
+      console.error('Instructor enrollments fetch error:', instructorEnrollmentsError)
+    }
+
+    // Fetch instructor details for each enrollment
+    let instructorEnrollmentsWithDetails: Array<{ [key: string]: any }> = []
+    if (instructorEnrollments && instructorEnrollments.length > 0) {
+      const typedEnrollments = instructorEnrollments as Array<{ id: string; instructor_id: string; status: string; created_at: string }>
+      const instructorIds = typedEnrollments.map(ie => ie.instructor_id)
+      const { data: instructors, error: instructorsError } = await supabase
+        .from('profiles')
+        .select('id, full_name, profile_picture_url')
+        .in('id', instructorIds)
+
+      if (instructorsError && typeof instructorsError === 'object' && 'message' in instructorsError) {
+        console.error('Instructors fetch error:', instructorsError)
+      }
+
+      const instructorsList = (instructors || []) as Array<{ id: string; full_name: string | null; profile_picture_url: string | null }>
+      instructorEnrollmentsWithDetails = typedEnrollments.map(enrollment => ({
+        ...enrollment,
+        instructor: instructorsList.find(i => i.id === enrollment.instructor_id) || null
+      }))
+    }
+
     return {
       success: true,
       data: {
         student,
         enrollments: enrollmentsWithClasses || [],
         quizAttempts: quizAttempts || [],
+        instructorEnrollments: instructorEnrollmentsWithDetails || [],
       },
     }
   } catch (error) {

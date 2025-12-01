@@ -78,9 +78,13 @@ export async function middleware(request: NextRequest) {
   // If authenticated user tries to access auth pages (signin/signup), redirect to dashboard
   if (isPublicRoute) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = typedProfile?.role === 'admin' || typedProfile?.role === 'instructor'
-      ? '/admin/dashboard'
-      : '/student/dashboard'
+    if (typedProfile?.role === 'admin') {
+      redirectUrl.pathname = '/admin/dashboard'
+    } else if (typedProfile?.role === 'instructor') {
+      redirectUrl.pathname = '/instructor/dashboard'
+    } else {
+      redirectUrl.pathname = '/student/dashboard'
+    }
     return NextResponse.redirect(redirectUrl)
   }
 

@@ -9,7 +9,7 @@ import { handleServerError } from '@/lib/utils/errors'
  *
  * @security Server-side only, protected by RLS
  */
-export async function createInstructorEnrollment(instructorId: string) {
+export async function createInstructorEnrollment(instructorId: string, passcode?: string) {
   try {
     const supabase = await createClient()
     const user = await getUser()
@@ -18,10 +18,10 @@ export async function createInstructorEnrollment(instructorId: string) {
       return { success: false, error: 'Not authenticated' }
     }
 
-    // Ensure target profile is an instructor
+    // Ensure target profile is an instructor and get passcode (if any)
     const { data: instructorProfile, error: instructorError } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, enrollment_passcode')
       .eq('id', instructorId)
       .single()
 
@@ -32,10 +32,28 @@ export async function createInstructorEnrollment(instructorId: string) {
     const typedInstructorProfile = instructorProfile as {
       id: string
       role: 'admin' | 'instructor' | 'student'
+      enrollment_passcode: string | null
     }
 
     if (typedInstructorProfile.role !== 'instructor') {
       return { success: false, error: 'Selected user is not an instructor' }
+    }
+
+    // If instructor has a passcode set, validate it
+    if (typedInstructorProfile.enrollment_passcode) {
+      if (!passcode) {
+        return {
+          success: false,
+          error: 'A passcode is required to enroll with this instructor.',
+        }
+      }
+
+      if (passcode !== typedInstructorProfile.enrollment_passcode) {
+        return {
+          success: false,
+          error: 'Invalid passcode. Please check with your instructor and try again.',
+        }
+      }
     }
 
     // Check if already enrolled with this instructor
