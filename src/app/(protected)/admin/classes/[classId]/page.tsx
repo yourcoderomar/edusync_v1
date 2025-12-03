@@ -131,6 +131,18 @@ export default async function ClassDetailsPage({ params }: ClassDetailsPageProps
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assignments</CardTitle>
+            <CardDescription>View all assignments for this class</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" variant="outline">
+              <Link href={`/admin/classes/${classId}/assignments`}>View assignments</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </>
   )

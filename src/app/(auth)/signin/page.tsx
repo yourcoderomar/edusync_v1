@@ -3,10 +3,10 @@ import { SignInForm } from '@/components/auth/SignInForm'
 
 export const metadata: Metadata = {
   title: 'Sign In',
-  description: 'Sign in to your EduSync account to access your classes, assignments, and more.',
+  description: 'Sign in to your Alemni account to access your classes, assignments, and more.',
   openGraph: {
-    title: 'Sign In | EduSync',
-    description: 'Sign in to your EduSync account',
+    title: 'Sign In | Alemni',
+    description: 'Sign in to your Alemni account',
   },
 }
 

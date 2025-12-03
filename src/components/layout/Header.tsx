@@ -97,7 +97,7 @@ export async function Header() {
           >
             <Image
               src="/images/logo.png"
-              alt={`${process.env.NEXT_PUBLIC_APP_NAME || 'EduSync'} logo`}
+              alt={`${process.env.NEXT_PUBLIC_APP_NAME || 'Alemni'} logo`}
               width={195}
               height={60}
               className="object-contain h-12 w-auto"
@@ -144,7 +144,7 @@ export async function Header() {
           >
             <Image
               src="/images/logo.png"
-              alt={`${process.env.NEXT_PUBLIC_APP_NAME || 'EduSync'} logo`}
+              alt={`${process.env.NEXT_PUBLIC_APP_NAME || 'Alemni'} logo`}
               width={195}
               height={60}
               className="object-contain h-12 w-auto"

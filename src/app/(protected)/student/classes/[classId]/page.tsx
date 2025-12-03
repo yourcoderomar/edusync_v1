@@ -124,6 +124,37 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
   const quizAttempts = (quizAttemptData || []) as QuizAttemptRow[]
   const completedQuizzes = quizAttempts.filter((qa) => qa.submitted_at !== null).length
 
+  // Get recent assignments for these sessions to show on class page (student view)
+  type AssignmentRow = {
+    id: string
+    title: string
+    instructions?: string | null
+    due_at?: string | null
+    session_id: string
+    session?: { session_date: string } | null
+  }
+
+  const { data: assignmentsData } = sessionIds.length > 0
+    ? await supabase
+        .from('assignments')
+        .select(
+          `
+          id,
+          title,
+          instructions,
+          due_at,
+          session_id,
+          session:class_sessions!assignments_session_id_fkey (
+            session_date
+          )
+        `
+        )
+        .in('session_id', sessionIds)
+        .order('due_at', { ascending: true, nullsFirst: true })
+    : { data: [] as any[] }
+
+  const assignments = (assignmentsData || []) as AssignmentRow[]
+
   return (
     <>
       <header className="mb-8">
@@ -311,6 +342,73 @@ export default async function StudentClassDetailsPage({ params }: ClassDetailsPa
           </CardContent>
         </Card>
       </div>
+
+      {/* Assignments summary, similar to quizzes card */}
+      <section className="mt-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Assignments</CardTitle>
+                <CardDescription>
+                  Assignments from your recent sessions in this class
+                </CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/student/classes/${classId}/sessions`}>
+                  View Sessions
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {assignments.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No assignments available yet
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {assignments.slice(0, 5).map((assignment) => {
+                  const session = assignment.session
+                  return (
+                    <div
+                      key={assignment.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          {assignment.title}
+                        </p>
+                        {assignment.due_at && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Due {formatDate(assignment.due_at)}
+                          </p>
+                        )}
+                        {session && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Session: {formatDate(session.session_date)}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <Link
+                          href={`/student/classes/${classId}/sessions/${assignment.session_id}/assignments/${assignment.id}`}
+                        >
+                          Open
+                        </Link>
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </>
   )
 }

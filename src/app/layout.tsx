@@ -12,25 +12,26 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "EduSync - Educational Management Platform",
-    template: "%s | EduSync",
+    default: "Alemni - Educational Management Platform",
+    template: "%s | Alemni",
   },
-  description: "Educational management platform with role-based access for admins and students. Manage classes, attendance, quizzes, and more.",
-  keywords: ["education", "learning", "class management", "attendance", "quizzes", "LMS"],
-  authors: [{ name: "EduSync" }],
-  creator: "EduSync",
+  description:
+    "Alemni is an educational management platform with role-based access for admins, instructors, and students. Manage classes, attendance, quizzes, and more.",
+  keywords: ["alemni", "education", "learning", "class management", "attendance", "quizzes", "LMS"],
+  authors: [{ name: "Alemni" }],
+  creator: "Alemni",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: process.env.NEXT_PUBLIC_SITE_URL,
-    title: "EduSync - Educational Management Platform",
-    description: "Educational management platform with role-based access for admins and students.",
-    siteName: "EduSync",
+    title: "Alemni - Educational Management Platform",
+    description: "Alemni is an educational management platform with role-based access for admins, instructors, and students.",
+    siteName: "Alemni",
   },
   twitter: {
     card: "summary_large_image",
-    title: "EduSync - Educational Management Platform",
-    description: "Educational management platform with role-based access for admins and students.",
+    title: "Alemni - Educational Management Platform",
+    description: "Alemni is an educational management platform with role-based access for admins, instructors, and students.",
   },
   robots: {
     index: true,

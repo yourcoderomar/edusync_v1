@@ -3,10 +3,10 @@ import { SignUpForm } from '@/components/auth/SignUpForm'
 
 export const metadata: Metadata = {
   title: 'Sign Up',
-  description: 'Create a new EduSync account to get started with online learning and class management.',
+  description: 'Create a new Alemni account to get started with online learning and class management.',
   openGraph: {
-    title: 'Sign Up | EduSync',
-    description: 'Create a new EduSync account',
+    title: 'Sign Up | Alemni',
+    description: 'Create a new Alemni account',
   },
 }
 
@@ -24,7 +24,7 @@ export default function SignUpPage() {
           Create your account
         </h2>
         <p className="mt-2 text-sm font-medium text-gray-700">
-          Get started with EduSync today
+          Get started with Alemni today
         </p>
       </header>
 

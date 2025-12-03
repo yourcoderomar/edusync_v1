@@ -44,7 +44,7 @@ export default function AuthLayout({
         </main>
 
         <footer className="mt-8 text-center text-sm text-gray-600">
-          <p>&copy; {new Date().getFullYear()} EduSync. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Alemni. All rights reserved.</p>
         </footer>
       </div>
     </div>

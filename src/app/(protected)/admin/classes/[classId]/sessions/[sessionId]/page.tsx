@@ -5,6 +5,7 @@ import { getSessionById } from '@/lib/actions/sessions/get-sessions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SendMessageButton } from '@/components/sessions/SendMessageButton'
+import { SessionTime } from '@/components/sessions/SessionTime'
 import { formatDate } from '@/lib/utils/format'
 
 interface SessionDetailsPageProps {
@@ -84,31 +85,13 @@ export default async function SessionDetailsPage({ params }: SessionDetailsPageP
             <div>
               <p className="text-sm text-gray-500">Start Time</p>
               <p className="text-lg font-medium">
-                {session.starts_at ? (
-                  <time dateTime={session.starts_at}>
-                    {new Date(session.starts_at).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </time>
-                ) : (
-                  <span className="text-gray-400">Not set</span>
-                )}
+                <SessionTime isoString={session.starts_at} />
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">End Time</p>
               <p className="text-lg font-medium">
-                {session.ends_at ? (
-                  <time dateTime={session.ends_at}>
-                    {new Date(session.ends_at).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </time>
-                ) : (
-                  <span className="text-gray-400">Not set</span>
-                )}
+                <SessionTime isoString={session.ends_at} />
               </p>
             </div>
             <div>
@@ -142,6 +125,20 @@ export default async function SessionDetailsPage({ params }: SessionDetailsPageP
             <Button asChild className="w-full" variant="outline">
               <Link href={`/admin/classes/${classId}/sessions/${sessionId}/quizzes`}>
                 View quizzes
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assignments</CardTitle>
+            <CardDescription>Session assignments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" variant="outline">
+              <Link href={`/admin/classes/${classId}/sessions/${sessionId}/assignments`}>
+                View assignments
               </Link>
             </Button>
           </CardContent>

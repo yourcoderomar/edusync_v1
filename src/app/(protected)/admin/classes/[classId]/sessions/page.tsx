@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils/format'
+import { SessionTime } from '@/components/sessions/SessionTime'
 
 interface SessionsPageProps {
   params: Promise<{ classId: string }>
@@ -119,28 +120,10 @@ export default async function ClassSessionsPage({ params }: SessionsPageProps) {
                         </time>
                       </TableCell>
                       <TableCell>
-                        {session.starts_at ? (
-                          <time dateTime={session.starts_at}>
-                            {new Date(session.starts_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </time>
-                        ) : (
-                          <span className="text-gray-400">Not set</span>
-                        )}
+                        <SessionTime isoString={session.starts_at} />
                       </TableCell>
                       <TableCell>
-                        {session.ends_at ? (
-                          <time dateTime={session.ends_at}>
-                            {new Date(session.ends_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </time>
-                        ) : (
-                          <span className="text-gray-400">Not set</span>
-                        )}
+                        <SessionTime isoString={session.ends_at} />
                       </TableCell>
                       <TableCell>
                         {session.creator?.full_name || 'Unknown'}

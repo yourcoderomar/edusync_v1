@@ -2,8 +2,8 @@
  * Application constants
  */
 
-export const APP_NAME = 'EduSync'
-export const APP_DESCRIPTION = 'Educational management platform with role-based access'
+export const APP_NAME = 'Alemni'
+export const APP_DESCRIPTION = 'Alemni is an educational management platform with role-based access'
 
 export const ROLES = {
   ADMIN: 'admin',
