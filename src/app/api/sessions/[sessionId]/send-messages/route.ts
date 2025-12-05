@@ -197,7 +197,7 @@ export async function POST(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'EduSync/1.0',
+            'User-Agent': 'Alemni/1.0',
           },
           body: JSON.stringify({
             data: tableData, // Send as array/table

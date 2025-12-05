@@ -26,7 +26,7 @@ export default function AuthLayout({
           <div className="flex justify-center mb-2">
             <Image
               src="/images/logo.png"
-              alt={`${process.env.NEXT_PUBLIC_APP_NAME} logo`}
+              alt={`${process.env.NEXT_PUBLIC_APP_NAME || 'Alemni'} logo`}
               width={200}
               height={65}
               className="object-contain h-16 w-auto"

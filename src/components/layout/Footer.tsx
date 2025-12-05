@@ -14,7 +14,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           <div>
             <h3 className="text-sm font-semibold text-white">
-              {process.env.NEXT_PUBLIC_APP_NAME}
+              {process.env.NEXT_PUBLIC_APP_NAME || 'Alemni'}
             </h3>
             <p className="mt-2 text-sm text-white/80">
               Educational management platform with role-based access for admins and students.
@@ -75,7 +75,7 @@ export function Footer() {
 
         <div className="mt-8 border-t border-[#353535] pt-8">
           <p className="text-center text-sm text-white/70">
-            &copy; {currentYear} {process.env.NEXT_PUBLIC_APP_NAME}. All rights reserved.
+            &copy; {currentYear} {process.env.NEXT_PUBLIC_APP_NAME || 'Alemni'}. All rights reserved.
           </p>
         </div>
       </div>
