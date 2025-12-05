@@ -44,3 +44,5 @@ export function ShortcutCard({ title, description, actions }: ShortcutCardProps)
 
 
 
+
+
