@@ -38,6 +38,7 @@ export interface Database {
           parent_phone_number: string | null
           role: 'admin' | 'student' | 'instructor'
           profile_picture_url: string | null
+          is_guest: boolean
           created_at: string
           updated_at: string
         }
@@ -50,6 +51,7 @@ export interface Database {
           parent_phone_number?: string | null
           role?: 'admin' | 'student' | 'instructor'
           profile_picture_url?: string | null
+          is_guest?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -62,6 +64,7 @@ export interface Database {
           parent_phone_number?: string | null
           role?: 'admin' | 'student' | 'instructor'
           profile_picture_url?: string | null
+          is_guest?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -457,7 +460,14 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_guest_account: {
+        Args: {
+          p_full_name: string
+          p_phone: string
+          p_parent_phone_number: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       user_role: 'admin' | 'student' | 'instructor'

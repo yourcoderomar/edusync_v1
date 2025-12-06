@@ -99,9 +99,16 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
               </div>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {student.full_name || 'Unnamed Student'}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {student.full_name || 'Unnamed Student'}
+                </h1>
+                {(student as any).is_guest && (
+                  <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full">
+                    Guest Account
+                  </span>
+                )}
+              </div>
               {student.phone && (
                 <p className="mt-2 text-gray-600">
                   <span className="text-gray-500">Phone:</span> {student.phone}
@@ -114,13 +121,15 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
               )}
               <p className="mt-1 text-sm text-gray-500">
                 <time dateTime={student.created_at}>
-                  Joined {formatDate(student.created_at)}
+                  {(student as any).is_guest ? 'Created' : 'Joined'} {formatDate(student.created_at)}
                 </time>
               </p>
             </div>
           </div>
           <Button asChild variant="outline">
-            <Link href="/admin/students">Back to students</Link>
+            <Link href={(student as any).is_guest ? "/admin/guests" : "/admin/students"}>
+              Back to {(student as any).is_guest ? "guests" : "students"}
+            </Link>
           </Button>
         </div>
       </header>
@@ -137,13 +146,18 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
                 <p className="text-2xl font-bold text-gray-900">{enrollments.length}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Quiz Attempts</p>
-                <p className="text-2xl font-bold text-gray-900">{quizAttempts.length}</p>
+                <p className="text-sm text-gray-500">
+                  {(student as any).is_guest ? 'Instructor Enrollments' : 'Quiz Attempts'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {(student as any).is_guest ? instructorEnrollments.length : quizAttempts.length}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {!(student as any).is_guest && (
         <Card>
           <CardHeader>
             <CardTitle>Performance</CardTitle>
@@ -174,12 +188,13 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
             )}
           </CardContent>
         </Card>
+        )}
 
         <Card>
           <CardHeader>
             <CardTitle>Enroll in class</CardTitle>
             <CardDescription>
-              Enroll this student into an additional class.
+              Enroll this {(student as any).is_guest ? 'guest account' : 'student'} into an additional class.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,7 +211,7 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
           <CardHeader>
             <CardTitle id="enrollments-heading">Enrolled Classes</CardTitle>
             <CardDescription>
-              Classes this student is currently enrolled in
+              Classes this {(student as any).is_guest ? 'guest account' : 'student'} is currently enrolled in
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -250,6 +265,7 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
         </Card>
       </section>
 
+      {!(student as any).is_guest && (
       <section aria-labelledby="quizzes-heading">
         <Card>
           <CardHeader>
@@ -315,13 +331,14 @@ export default async function StudentDetailsPage({ params }: StudentDetailsPageP
           </CardContent>
         </Card>
       </section>
+      )}
 
       <section aria-labelledby="instructors-heading" className="mt-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle id="instructors-heading">Instructor Enrollments</CardTitle>
             <CardDescription>
-              Instructors this student is enrolled with
+              Instructors this {(student as any).is_guest ? 'guest account' : 'student'} is enrolled with
             </CardDescription>
           </CardHeader>
           <CardContent>

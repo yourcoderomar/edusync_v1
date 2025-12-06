@@ -89,3 +89,4 @@ The API route includes debug IDs in all responses. If you encounter errors:
 - [ ] Verified Supabase connection works
 - [ ] Verified n8n webhook is accessible from Vercel
 
+

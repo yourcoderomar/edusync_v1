@@ -26,10 +26,10 @@ export async function enrollStudentInClass(input: unknown) {
     // Validate input
     const { studentId, classId } = adminEnrollStudentSchema.parse(input) as AdminEnrollStudentInput
 
-    // Optional: ensure target user is a student
+    // Optional: ensure target user is a student (including guest accounts)
     const { data: studentProfile, error: studentError } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, is_guest')
       .eq('id', studentId)
       .single()
 
@@ -40,8 +40,13 @@ export async function enrollStudentInClass(input: unknown) {
       }
     }
 
-    const typedStudentProfile = studentProfile as { id: string; role: 'admin' | 'instructor' | 'student' }
+    const typedStudentProfile = studentProfile as { 
+      id: string
+      role: 'admin' | 'instructor' | 'student'
+      is_guest: boolean
+    }
 
+    // Allow regular students and guest accounts (which are also students)
     if (typedStudentProfile.role !== 'student') {
       return {
         success: false,

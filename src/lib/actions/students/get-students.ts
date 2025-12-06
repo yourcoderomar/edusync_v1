@@ -94,6 +94,7 @@ export async function getStudentById(studentId: string) {
       }
     }
 
+    // Get student or guest account (guests are also students with is_guest = true)
     const { data: student, error } = await supabase
       .from('profiles')
       .select('*')

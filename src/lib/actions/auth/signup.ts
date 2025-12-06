@@ -73,6 +73,57 @@ export async function signUp(formData: FormData) {
     // Profile is now created automatically by database trigger
     console.log('✅ Profile created automatically by database trigger for user:', authData.user.id)
 
+    // Check for existing guest account with matching phone number
+    const { data: guestAccount } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone', validatedInput.phone)
+      .eq('is_guest', true)
+      .maybeSingle()
+
+    if (guestAccount) {
+      const guestId = (guestAccount as { id: string }).id
+      const newUserId = authData.user.id
+
+      console.log(`🔄 Found guest account ${guestId}, transferring enrollments to new user ${newUserId}`)
+
+      // Transfer enrollments from guest to new user
+      const { error: enrollmentsError } = await supabase
+        .from('enrollments')
+        .update({ user_id: newUserId } as never)
+        .eq('user_id', guestId)
+
+      if (enrollmentsError) {
+        console.error('Error transferring enrollments:', enrollmentsError)
+        // Continue anyway - enrollments transfer failed but user is created
+      }
+
+      // Transfer instructor enrollments from guest to new user
+      const { error: instructorEnrollmentsError } = await supabase
+        .from('instructor_enrollments')
+        .update({ student_id: newUserId } as never)
+        .eq('student_id', guestId)
+
+      if (instructorEnrollmentsError) {
+        console.error('Error transferring instructor enrollments:', instructorEnrollmentsError)
+        // Continue anyway - instructor enrollments transfer failed but user is created
+      }
+
+      // Delete guest account after transferring enrollments
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', guestId)
+        .eq('is_guest', true)
+
+      if (deleteError) {
+        console.error('Error deleting guest account:', deleteError)
+        // Continue anyway - guest account deletion failed but user is created
+      } else {
+        console.log(`✅ Guest account ${guestId} deleted after transferring enrollments`)
+      }
+    }
+
     // Revalidate and redirect to student dashboard
     revalidatePath('/', 'layout')
     redirect('/student/dashboard')

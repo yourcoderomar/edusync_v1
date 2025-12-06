@@ -23,6 +23,7 @@ const adminNavItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard' },
   { name: 'Classes', href: '/admin/classes' },
   { name: 'Students', href: '/admin/students' },
+  { name: 'Guest Accounts', href: '/admin/guests' },
   { name: 'Enrollment Requests', href: '/admin/enrollment-requests', showBadge: true },
   { name: 'Profile', href: '/profile' },
 ]
