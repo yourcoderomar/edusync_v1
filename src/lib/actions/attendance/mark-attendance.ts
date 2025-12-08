@@ -52,6 +52,7 @@ export async function markBulkAttendance(input: BulkMarkAttendanceInput) {
         marked_at: new Date().toISOString(),
         notes: (a as any).notes || null,
         quiz_grade: quizGrade,
+        assignment_status: (a as any).assignmentStatus ?? null,
       }
     })
 
@@ -140,7 +141,7 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
     // Get existing attendance for this session
     const { data: existingAttendance } = await supabase
       .from('attendance')
-      .select('student_id, status, notes, quiz_grade')
+    .select('student_id, status, notes, quiz_grade, assignment_status')
       .eq('session_id', sessionId)
       .in('student_id', studentIds)
 
@@ -195,7 +196,7 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
 
     // Merge existing attendance with student data
     // Priority: attendance quiz_grade > latest quiz attempt score
-    const attendanceData = (existingAttendance || []) as Array<{ student_id: string; status: string; notes: string | null; quiz_grade: number | null }>
+  const attendanceData = (existingAttendance || []) as Array<{ student_id: string; status: string; notes: string | null; quiz_grade: number | null; assignment_status: string | null }>
     const studentsData = (students || []) as Array<{ id: string; full_name: string | null; phone: string | null; profile_picture_url: string | null }>
     const studentsWithAttendance = studentsData.map(student => {
       const existing = attendanceData.find(a => a.student_id === student.id)
@@ -207,6 +208,7 @@ export async function getStudentsForAttendance(classId: string, sessionId: strin
         currentStatus: existing?.status || null,
         currentNotes: existing?.notes || '',
         currentQuizGrade: quizGrade,
+      currentAssignmentStatus: (existing as any)?.assignment_status || null,
       }
     }) || []
 

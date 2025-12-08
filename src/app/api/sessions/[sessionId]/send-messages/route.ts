@@ -153,6 +153,11 @@ export async function POST(
             hasQuizGrade: record.quiz_grade !== null && record.quiz_grade !== undefined,
             hasNotes: !!record.notes,
             hasQuizzes: quizzes.length > 0,
+            assignmentStatus: (record as any).assignment_status || null,
+            assignmentStatusFormatted: (record as any).assignment_status
+              ? ((record as any).assignment_status as string).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+              : null,
+            hasAssignmentStatus: !!(record as any).assignment_status,
           }
         })
     } catch (error) {

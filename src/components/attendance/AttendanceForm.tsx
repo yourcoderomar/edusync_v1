@@ -19,6 +19,7 @@ interface Student {
   currentStatus: string | null
   currentNotes: string
   currentQuizGrade: number | null
+  currentAssignmentStatus: 'done' | 'not_done' | 'not_required' | null
 }
 
 interface AttendanceFormProps {
@@ -26,6 +27,8 @@ interface AttendanceFormProps {
   sessionId: string
   students: Student[]
 }
+
+type AssignmentStatus = 'done' | 'not_done' | 'not_required' | null
 
 /**
  * Attendance marking form with card-based layout
@@ -45,6 +48,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     status: 'present' | 'absent'
     notes: string
     quizGrade: string
+    assignmentStatus: AssignmentStatus
   }>>(
     students.reduce((acc, student) => {
       // Map existing statuses to attended/absent
@@ -62,9 +66,10 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
         status: mappedStatus,
         notes: student.currentNotes || '',
         quizGrade: student.currentQuizGrade?.toString() || '',
+        assignmentStatus: student.currentAssignmentStatus || null,
       }
       return acc
-    }, {} as Record<string, { status: 'present' | 'absent'; notes: string; quizGrade: string }>)
+    }, {} as Record<string, { status: 'present' | 'absent'; notes: string; quizGrade: string; assignmentStatus: AssignmentStatus }>)
   )
 
   // Set up real-time subscription for attendance updates
@@ -186,6 +191,26 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
     }))
   }
 
+  const updateAssignmentStatus = (studentId: string, value: AssignmentStatus) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        assignmentStatus: value,
+      },
+    }))
+  }
+
+  const setAssignmentStatusForAll = (value: AssignmentStatus) => {
+    setAttendanceData(prev => {
+      const updated = { ...prev }
+      Object.keys(updated).forEach(studentId => {
+        updated[studentId] = { ...updated[studentId], assignmentStatus: value }
+      })
+      return updated
+    })
+  }
+
   const toggleStatus = (studentId: string) => {
     setAttendanceData(prev => ({
       ...prev,
@@ -221,6 +246,7 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
             status: data.status as 'present' | 'absent',
             notes: data.notes || null,
             quizGrade,
+            assignmentStatus: data.assignmentStatus,
           }
         })
 
@@ -278,6 +304,56 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
               Showing {filteredStudents.length} of {students.length} students
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Bulk assignment actions */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-gray-900">Assignment status</p>
+              <p className="text-sm text-gray-600">Apply to all students at once.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={isSubmitting}
+                onClick={() => setAssignmentStatusForAll('done')}
+              >
+                Mark all done
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={isSubmitting}
+                onClick={() => setAssignmentStatusForAll('not_done')}
+              >
+                Mark all not done
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={() => setAssignmentStatusForAll('not_required')}
+              >
+                No assignment today
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={isSubmitting}
+                onClick={() => setAssignmentStatusForAll(null)}
+              >
+                Clear all assignment status
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -392,6 +468,25 @@ export function AttendanceForm({ classId, sessionId, students }: AttendanceFormP
                       className="w-20 h-8 text-center"
                     />
                   </div>
+
+                {/* Assignment status */}
+                <div className="w-full">
+                  <label className="text-sm text-gray-600 block mb-1">Assignment</label>
+                  <select
+                    value={attendanceData[student.id]?.assignmentStatus || ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? null : e.target.value as AssignmentStatus
+                      updateAssignmentStatus(student.id, value)
+                    }}
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50"
+                  >
+                    <option value="">Select status</option>
+                    <option value="done">Done</option>
+                    <option value="not_done">Not done</option>
+                    <option value="not_required">No assignment today</option>
+                  </select>
+                </div>
 
                   {/* Optional Notes */}
                   {attendanceData[student.id]?.notes && (

@@ -24,6 +24,7 @@ export const bulkMarkAttendanceSchema = z.object({
       status: z.enum(['present', 'absent', 'late', 'excused']),
       notes: z.union([z.string(), z.null()]).optional(),
       quizGrade: z.union([z.string(), z.number(), z.null()]).optional(),
+      assignmentStatus: z.enum(['done', 'not_done', 'not_required']).optional().nullable(),
     }).passthrough()
   ).min(1, 'At least one student must be marked'),
 })

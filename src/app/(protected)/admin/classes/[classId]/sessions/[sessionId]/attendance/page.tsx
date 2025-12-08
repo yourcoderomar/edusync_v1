@@ -49,6 +49,12 @@ function getStatusColor(status: string) {
   }
 }
 
+function formatAssignmentStatus(status: string | null | undefined) {
+  if (!status) return null
+  if (status === 'not_required') return 'No assignment today'
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 /**
  * Session attendance page
  * 
@@ -186,6 +192,7 @@ export default async function SessionAttendancePage({ params }: AttendancePagePr
                     <TableHead>Phone</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Quiz Grade</TableHead>
+                  <TableHead>Assignment</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead>Marked By</TableHead>
                     <TableHead>Marked At</TableHead>
@@ -211,6 +218,9 @@ export default async function SessionAttendancePage({ params }: AttendancePagePr
                       </TableCell>
                       <TableCell>
                         {record.quiz_grade !== null ? `${record.quiz_grade}%` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {formatAssignmentStatus((record as any).assignment_status) || '-'}
                       </TableCell>
                       <TableCell>
                         {record.notes || '-'}
